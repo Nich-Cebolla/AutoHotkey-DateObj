@@ -1,11 +1,11 @@
-﻿
-class DateObj extends DateObj.Base {
+/*
+    Github: https://github.com/Nich-Cebolla/AutoHotkey-DateObj/blob/main/DateObj.ahk
+    Author: Nich-Cebolla
+    Version: 1.0.0
+    License: MIT
+*/
 
-    /**
-     * @property {Map} Cache - A cache of `DateObj` instances. The key is the `DateFormat` string,
-     * and the value is the `DateObj` instance.
-     */
-    static Cache := Map()
+class DateObj extends DateObj.Base {
 
     /**
      * @description - Creates a `DateObj` instance from a date string and date format string. The
@@ -129,15 +129,13 @@ class DateObj extends DateObj.Base {
     }
 
     /**
-     * @description - Initializes the `TimeUnits` map, and also initializes the base object's properties
-     * to an empty string. This can be used to reset these values if they were changed.
-     * @param {Boolean} [SetDefaults=true] - When true, the default properties are set to empty strings.
-     * @param {Boolean} [SetTimeUnits=true] - When true, the `TimeUnits` map is set.
+     * @description - `TimeUnits` contains the static data needed to parse date strings. This creates
+     * a copy of it.
+     * @returns {Map} - The `TimeUnits` map.
      */
-    static SetChars(SetDefaults := true, SetTimeUnits := true) {
-        if SetTimeUnits {
-            this.TimeUnits := Map(
-                'y', { Name: 'Year', Special: 3, Count: Map(1, '{1,2}', 2, '{2}', 4, '{4}', '?', '{0,4}') }
+    static GetTimeUnits() {
+        TimeUnits := Map(
+              'y', { Name: 'Year', Special: 3, Count: Map(1, '{1,2}', 2, '{2}', 4, '{4}', '?', '{0,4}') }
             , 'M', { Name: 'Month', Special: 4, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}')  }
             , 'd', { Name: 'Day', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
             , 'H', { Name: 'Hour', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
@@ -145,34 +143,39 @@ class DateObj extends DateObj.Base {
             , 'm', { Name: 'Minute', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
             , 's', { Name: 'Second', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
             , 't', { Name: 't', Special: 2, Pattern: ['(?<t>[ap]{1})', '(?<t>(?:[ap]m){1})'] }
-            )
-            this.TimeUnits.Default := ''
-        }
-        if SetDefaults {
-            DateObj.Base.Prototype.DefineProp('__TimeUnits', { Value: this.TimeUnits })
-            for Prop in ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second', 't', 'Options']
-                DateObj.Base.Prototype.DefineProp(Prop, { Value: '' })
-        }
+        )
+        TimeUnits.Default := ''
+        return TimeUnits
+    }
+
+    /**
+     * @description - Initializes the `TimeUnits` map.
+     */
+    static SetTimeUnits() {
+        DateObj.Base.Prototype.DefineProp('__TimeUnits', { Value: this.GetTimeUnits() })
     }
 
     /**
      * @description - Set a default value that the date objects will use for the timestamp when the
      * value is absent.
-     * @param {String} Name - The name of the property to set the default value for. Valid names:
-     * Year, Month, Day, Hour, Minute, Second.
-     * @param {String} Value - The default value to set.
+     * @param {String:Variadic} [Defaults] - When used, the values passed to this function should
+     * consist of alternating name and value pairs, where the name comes before the value. Example:
+     * `DateObj.SetDefault('Hour', '00', 'Minute', '00', 'Year', '2020')`. This will set the default
+     * values for each of the included properties.
      */
-    static SetDefault(Name, Value, Params*) {
-        DateObj.Base.Prototype.DefineProp(Name, { Value: Value })
-        if Params.Length {
-            if Mod(Params.Length, 2)
-                throw ValueError('The number of parameters must be even.', -1)
-            Proto := DateObj.Base.Prototype
-            loop Params.Length / 2 {
-                Proto.DefineProp(Params[A_Index * 2 - 1], { Value: Params[A_Index * 2] })
-            }
-        }
+    static SetDefault(Defaults*) {
+        Proto := DateObj.Base.Prototype
+        if Mod(Defaults.Length, 2)
+            throw ValueError('The number of parameters must be even.', -1)
+        loop Defaults.Length / 2
+            Proto.DefineProp(Defaults[A_Index * 2 - 1], { Value: Defaults[A_Index * 2] })
     }
+
+    /**
+     * @property {Map} Cache - A cache of `DateObj` instances. The key is the `DateFormat` string,
+     * and the value is the `DateObj` instance.
+     */
+    static Cache := Map()
 
     /**
      * @property {DateObj.Parser} Parser - The parser object used to create this `DateObj` instance.
@@ -363,7 +366,7 @@ class DateObj extends DateObj.Base {
             ; challenging to get the pattern to match the way you want when using the '?' quantifier.
             ; The RegEx engine might skip the unit completely, even when present in the date string,
             ; if the content of your pattern is ambiguous. In the below example, this matches as expected.
-            ; Without the '[s]ec' at the end, the pattern does not match correctly with the minutes.
+            ; Without the '``sec' at the end, the pattern does not match correctly with the minutes.
             DateStr1 := 'In first place at just under 59 seconds'
             DateStr2 := 'In second place at 1 minute 2 seconds'
             DateFormat := 'm? \w+ ?s ``sec'
@@ -747,16 +750,15 @@ class DateObj extends DateObj.Base {
 
     class Base {
         /**
-         * @description - This `TimeUnits` property contains a map with the static data needed to parse
-         * date strings. It can be adjusted if needed. It's best to adjust it from the instane
-         * `DateObj.Parser` object, so as to not override the default values for all instances.
-         * Unless that is your intent, then you should modify `DateObj.Base.Prototype.__TimeUnits`.
-         * You can create a new copy of the defaults by calling `DateObj.SetChars()`.
+         * @description - The `TimeUnits` property contains a map with the static data needed to parse
+         * date strings. It can be adjusted if needed. It's best to adjust it from the instance
+         * `DateObj.Parser` object, so as to not override the default values for all instances. You
+         * can get a copy of it by calling `DateObj.GetTimeUnits()`.
          */
         TimeUnits[Char?] {
             Get {
                 if !HasProp(this, '__TimeUnits')
-                    DateObj.SetChars()
+                    DateObj.SetTimeUnits()
                 return IsSet(Char) ? this.__TimeUnits.Get(Char) : this.__TimeUnits
             }
             Set {
@@ -767,6 +769,38 @@ class DateObj extends DateObj.Base {
                 else
                     this.DefineProp('__TimeUnits', { Value: Value })
             }
+        }
+        Year {
+            Get => HasProp(this, '__Year') ? this.__Year : this.__Year := ''
+            Set => this.__Year := Value
+        }
+        Month {
+            Get => HasProp(this, '__Month') ? this.__Month : this.__Month := ''
+            Set => this.__Month := Value
+        }
+        Day {
+            Get => HasProp(this, '__Day') ? this.__Day : this.__Day := ''
+            Set => this.__Day := Value
+        }
+        Hour {
+            Get => HasProp(this, '__Hour') ? this.__Hour : this.__Hour := ''
+            Set => this.__Hour := Value
+        }
+        Minute {
+            Get => HasProp(this, '__Minute') ? this.__Minute : this.__Minute := ''
+            Set => this.__Minute := Value
+        }
+        Second {
+            Get => HasProp(this, '__Second') ? this.__Second : this.__Second := ''
+            Set => this.__Second := Value
+        }
+        Options {
+            Get => HasProp(this, '__Options') ? this.__Options : this.__Options := ''
+            Set => this.__Options := Value
+        }
+        t {
+            Get => HasProp(this, '__t') ? this.__t : this.__t := ''
+            Set => this.__t := Value
         }
     }
 }
