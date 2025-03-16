@@ -45,7 +45,7 @@ class DateObj extends DateObj.Base {
         ; challenging to get the pattern to match the way you want when using the '?' quantifier.
         ; The RegEx engine might skip the unit completely, even when present in the date string,
         ; if the content of your pattern is ambiguous. In the below example, this matches as expected.
-        ; Without the '[s]ec' at the end, the pattern does not match correctly with the minutes.
+        ; Without the '``sec' at the end, the pattern does not match correctly with the minutes.
         DateStr1 := 'In first place at just under 59 seconds'
         DateStr2 := 'In second place at 1 minute 2 seconds'
         DateFormat := 'm? \w+ ?s ``sec'
