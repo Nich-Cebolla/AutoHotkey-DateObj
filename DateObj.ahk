@@ -9,7 +9,7 @@ class DateObj extends DateObj.Base {
 
     /**
      * @description - Creates a `DateObj` instance from a date string and date format string. The
-     * parser is created in the process, and is available from the property `DateObjInstane.Parser`.
+     * parser is created in the process, and is available from the property `DateObjInstance.Parser`.
      * @param {String} DateString - The date string to create the `DateObj` instance from.
      * @param {String} DateFormat - The format of the date string. The format follows the same rules as
      * described on the AHK `FormatDate` page: {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm}.
@@ -70,7 +70,7 @@ class DateObj extends DateObj.Base {
     @
     * @param {Boolean} [RegExOptions='i)'] - The RegEx options to add to the beginning of the pattern.
     * @param {Integer} [Cache=1] - Any one of the following flags:
-    * - 1: If the `DateFormat` string is in the cache, the associated object will be retrived and
+    * - 1: If the `DateFormat` string is in the cache, the associated object will be retrieved and
     * set as this object's base. This instance will inherit the properties from the cached object.
     * If the current input `IfShortYear` or `RegExOptions` values are different from the values
     * set on the cached object, this instance will reflect the new values. No further processing
@@ -82,7 +82,8 @@ class DateObj extends DateObj.Base {
     * @param {String} [IfShortYear] - Use this to specify the century when the year is 1 or 2
     * digits length. When unset, the current century is used. Example: '20' for 2020, or if the
     * year has 1 digit, '200' for 2009.
-    * @returns {DateObj.Parser} - The `DateObj.Parser` instance.
+    * @returns {DateObj} - The `DateObj` instance. You can retrieve the parser object from
+    * `DateObjInstance.Parser`.
     */
     static Call(DateString, DateFormat, RegExOptions := 'i)', Cache := 1, IfShortYear?, Validate := false) {
         return DateObj.Parser(DateFormat, RegExOptions, Cache, IfShortYear ?? unset)(DateString, Validate)
@@ -302,7 +303,6 @@ class DateObj extends DateObj.Base {
      * @description - Enables the ability to get a numeric value by adding 'N' to the front of a
      * property name.
      * @example
-
         Date := DateObj('2024-01-28 19:15', 'yyyy-MM-dd HH:mm')
         MsgBox(Type(Date.Minute)) ; String
         MsgBox(Type(Date.NMinute)) ; Integer
@@ -323,7 +323,7 @@ class DateObj extends DateObj.Base {
         if SubStr(Name, 1, 1) = 'N' && this.HasOwnProp(SubStr(Name, 2)) {
             return Number(this.%SubStr(Name, 2)%||0)
         }
-        throw PropertyError('Unknown property.', -1, 'Specifically: ' Name)
+        throw PropertyError('Unknown property.', -1, Name)
     }
 
     ; @todo - Add in support for callouts and verbs so they can be used without special handling
@@ -612,7 +612,7 @@ class DateObj extends DateObj.Base {
             }
             _ThrowSeparateGroupError() {
                 throw ValueError('There are two separate groups of the same unit in the input ``DateFormat``'
-                ', whih is invalid.', -2, 'Specifically: ' Previous)
+                ', which is invalid.', -2, Previous)
             }
         }
         /**
@@ -709,7 +709,7 @@ class DateObj extends DateObj.Base {
                         case 'dec': return '12'
                         default:
                             throw ValueError('The script encountered an unexpected value for "Month".'
-                            , -1, 'Specifically: ' Match[Descriptor.Name])
+                            , -1, Match[Descriptor.Name])
                     }
                 }
             }
@@ -743,7 +743,7 @@ class DateObj extends DateObj.Base {
                     _ThrowInvalidResultError('Second: ' Date.Second)
             }
             _ThrowInvalidResultError(Value) {
-                throw ValueError('The result produced an invalid date.', -2, 'Specifically: ' Value)
+                throw ValueError('The result produced an invalid date.', -2, Value)
             }
         }
     }
@@ -804,5 +804,3 @@ class DateObj extends DateObj.Base {
         }
     }
 }
-
-
