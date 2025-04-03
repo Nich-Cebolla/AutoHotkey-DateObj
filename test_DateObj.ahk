@@ -1,11 +1,15 @@
-﻿#Include DateObj.ahk
+#Include DateObj.ahk
 #Include ..\Array\Array.ahk
 ; https://github.com/Nich-Cebolla/AutoHotkey-Array
+#Include <Object.Prototype.Stringify_V1.0.0>
+; https://github.com/Nich-Cebolla/Stringify-ahk/blob/main/Object.Prototype.Stringify.ahk
 
 Result := Test()
 sleep 1
 
 Test() {
+    ErrorCollection := []
+    ;@region Parser
     Result := []
     DateStr := 'Jan 02, 1992 @ 2 after 5 pm'
     DateFormat := 'MMM dd, yyyy.+?m.+?h tt'
@@ -100,6 +104,26 @@ Test() {
         if _MsgBox(e)
             return
     }
+    ;@endregion
+
+    ;@region Adjust
+    Date := DateObj.FromTimestamp('20241231235959')
+    Date.Adjust(2, 's')
+    for Prop, Value in Map('Year', 2025, 'Month', 1, 'Day', 1, 'Hour', 0, 'Minute', 0, 'Second', 1) {
+        if Date.N%Prop% !== Value {
+            _Error(A_ThisFunc, A_LineFile, Value, Date.N%Prop%, Prop)
+        }
+    }
+    _ShowErrors()
+    Date := DateObj.FromTimestamp('20240101000001')
+    Date.Adjust(-2, 's')
+    for Prop, Value in Map('Year', 2023, 'Month', 12, 'Day', 31, 'Hour', 23, 'Minute', 59, 'Second', 59) {
+        if Date.N%Prop% !== Value {
+            _Error(A_ThisFunc, A_LineFile, Value, Date.N%Prop%, Prop)
+        }
+    }
+    _ShowErrors()
+    ;@endregion
 
     return Result
 
@@ -115,7 +139,27 @@ Test() {
         }
         return Errors.Length ? Errors : ''
     }
+    _Error(Function, Line, ExpectedValue, ActualValue, Extra?) {
+        ErrorCollection.Push(e := Error('Invalid value.', -2))
+        e.What := Function
+        e.Line := Line
+        e.Extra := 'Expected value: ' ExpectedValue '; Actual value: ' ActualValue (IsSet(Extra) ? '; ' Extra : '')
+    }
     _MsgBox(e) {
         return MsgBox(e.Join('`n') '`n`nPress OK to continue or Cancel to return.') == 'Cancel'
+    }
+    _ShowErrors() {
+        if ErrorCollection.Length {
+            S := ''
+            for e in ErrorCollection {
+                S .= '`r`n`r`n' e.Stringify()
+            }
+            G := Gui('+Resize -DPIScale')
+            G.Add('Edit', 'w800 r20 -Wrap vMain', S)
+            G.Show()
+            if MsgBox('Press OK to continue or Cancel to return.', , 'OC') == 'Cancel' {
+                Exit()
+            }
+        }
     }
 }
