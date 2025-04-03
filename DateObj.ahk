@@ -1,7 +1,7 @@
 /*
     Github: https://github.com/Nich-Cebolla/AutoHotkey-DateObj/blob/main/DateObj.ahk
     Author: Nich-Cebolla
-    Version: 1.0.0
+    Version: 1.0.1
     License: MIT
 */
 
@@ -239,10 +239,9 @@ class DateObj extends DateObj.Base {
     YWeek => FormatTime(this.Timestamp ' ' this.Options, 'YWeek')
 
     /**
-     * @description - Adds the time to this object's timestamp.
+     * @description - Adds the time to this object's timestamp, returning a new timestamp.
      * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
-     * Specify a negative number to perform subtraction.
+     * @param {Number} Time - The amount of time to add.
      * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
      * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
      * @returns {String} - The new timestamp.
@@ -252,13 +251,30 @@ class DateObj extends DateObj.Base {
     /**
      * @description - Adds the time to this object's timestamp, then creates a new object.
      * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
-     * Specify a negative number to perform subtraction.
+     * @param {Number} Time - The amount of time to add.
      * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
      * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
      * @returns {DateObj} - The new `DateObj` instance.
      */
     AddToNew(Time, TimeUnits) => DateObj.FromTimestamp(this.Add(Time, TimeUnits))
+
+    /**
+     * @description - Adds the time to this object's timestamp, modifying this objects value.
+     * @param {Number} Time - The amount of time to add.
+     * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
+     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
+     * @returns {DateObj} - A reference to this object.
+     */
+    Adjust(Time, TimeUnits) {
+        Timestamp := this.Add(Time, TimeUnits)
+        this.Year := SubStr(Timestamp, 1, 4)
+        this.Month := SubStr(Timestamp, 5, 2)
+        this.Day := SubStr(Timestamp, 7, 2)
+        this.Hour := SubStr(Timestamp, 9, 2)
+        this.Minute := SubStr(Timestamp, 11, 2)
+        this.Second := SubStr(Timestamp, 13, 2)
+        return this
+    }
 
     /**
      * @description - Get the difference between two dates.
@@ -804,3 +820,5 @@ class DateObj extends DateObj.Base {
         }
     }
 }
+
+
