@@ -1,16 +1,16 @@
-/*
+﻿/*
     Github: https://github.com/Nich-Cebolla/AutoHotkey-DateObj/blob/main/DateObj.ahk
     Author: Nich-Cebolla
-    Version: 1.0.1
+    Version: 2.0.0
     License: MIT
 */
 
-class DateObj extends DateObj.Base {
+class DateObj {
 
     /**
      * @description - Creates a `DateObj` instance from a date string and date format string. The
      * parser is created in the process, and is available from the property `DateObjInstance.Parser`.
-     * @param {String} DateString - The date string to create the `DateObj` instance from.
+     * @param {String} DateStr - The date string to parse.
      * @param {String} DateFormat - The format of the date string. The format follows the same rules as
      * described on the AHK `FormatDate` page: {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm}.
      * - The format string can include any of the following units: 'y', 'M', 'd', 'H', 'h', 'm', 's', 't'.
@@ -19,92 +19,81 @@ class DateObj extends DateObj.Base {
      * days like 'Mon', 'Tuesday', etc.
      * - In addition to the units, RegEx is viable within the format string. To permit compatibility
      * between the unit characters and RegEx, please adhere to these guidelines:
-     * - If you intend to use any of 'y, m, d, h, s, t' or their capitalized counterparts literally,
-     * you must escape the character with double backticks (e.g. '``y', '``m', '``d', etc.).
-     * - To write a literal backtick followed by one of those letters, use quadruple backticks.
-     * - Characters inside character classes (e.g. '[a-zA-Z]') and inside subcapture group names
-     * (e.g. "mygroup" in `(?<mygroup>``mon|``tue)`) do not need to be escaped.
-     * - All other verbs and special methods available in RegEx require escaped 'ymdhst' characters
-     * with the double backtick, at least until I add support for callouts and verbs without backticks.
-     * - Remember, the whole pattern must match on the date string for the function to succeed, so you
-     * will sometimes want to leverage '.+?' to match arbitary substrings in-between the date units.
+     *   - If the format string contains one or more literal "y", "M", "d", "H", "h", "m", "s" or "t"
+     * characters, you must escape the date format units using this escape: \t{...}
      * @example
-        DateStr := 'Jan 02, 1992 @ 2 after 5 pm'
-        DateFormat := 'MMM dd, yyyy.+?m.+?h tt'
-
-        DateStr := '2024-01-28 19:00'
-        DateFormat := 'yyyy-MM-dd HH:mm'
-
-        DateStr := '2024-01-28 07:00 PM'
-        DateFormat := 'yyyy-MM-dd hh:mm tt'
-
-        DateStr := '12, Dec, around 2 AM'
-        DateFormat := 'dd, MMM.+?h tt'
-
-        ; You can use '?' when a unit may or may not be present in a string. Note that it can be
-        ; challenging to get the pattern to match the way you want when using the '?' quantifier.
-        ; The RegEx engine might skip the unit completely, even when present in the date string,
-        ; if the content of your pattern is ambiguous. In the below example, this matches as expected.
-        ; Without the '``sec' at the end, the pattern does not match correctly with the minutes.
-        DateStr1 := 'In first place at just under 59 seconds'
-        DateStr2 := 'In second place at 1 minute 2 seconds'
-        DateFormat := 'm? \w+ ?s ``sec'
-
-        ; If the '?' quantifier is not working as expected, it might be more effective to group the
-        ; variable units with some nearby text that you know will appear along with the unit.
-        DateStr1 := 'Appointment time: Fri @ 3:30 PM'
-        DateStr2 := 'Appointment time: Fri, March 3, @ 3:30 PM'
-        DateFormat := '(?:, MMMM d,)? @ h:mm tt'
-
-        ; The `RegExMatchInfo` object is set to the property `Match`. If there's other information
-        ; in the string you are interested in, you can capture that in your format string too.
-        DateStr := 'Born March 30, 1992 - the year of the monkey'
-        DateFormat := 'MMMM d, yyyy.+?(?<animal>``year.+)'
-
-        ; You may sometimes want to use single-digit version of a unit insted of the two-digit unit.
-        DateStr1 := '2024-11-28 11:05:01'
-        DateStr2 := '2024-1-9 8:43:09'
-        ; If we use 'yyyy-MM-dd HH:mm:ss', even though it matches the first, it will fail to match
-        ; the second. The below format string will match both.
-        DateFormat := 'yyyy-M-d H:mm:ss'
-    @
-    * @param {Boolean} [RegExOptions='i)'] - The RegEx options to add to the beginning of the pattern.
-    * @param {Integer} [Cache=1] - Any one of the following flags:
-    * - 1: If the `DateFormat` string is in the cache, the associated object will be retrieved and
-    * set as this object's base. This instance will inherit the properties from the cached object.
-    * If the current input `IfShortYear` or `RegExOptions` values are different from the values
-    * set on the cached object, this instance will reflect the new values. No further processing
-    * is done to this instance. If `DateFormat` has not been cached, this instance will be added
-    * to the cache with the key being the `DateFormat` string.
-    * - 2: The cache is ignored and a new object is created. Nothing is added to the cache.
-    * - 3: The cache is ignored and a new object is created, and this instance is added to the
-    * cache, overwriting any existing cached object with the same `DateFormat` string.
-    * @param {String} [IfShortYear] - Use this to specify the century when the year is 1 or 2
-    * digits length. When unset, the current century is used. Example: '20' for 2020, or if the
-    * year has 1 digit, '200' for 2009.
-    * @returns {DateObj} - The `DateObj` instance. You can retrieve the parser object from
-    * `DateObjInstance.Parser`.
-    */
-    static Call(DateString, DateFormat, RegExOptions := 'i)', Cache := 1, IfShortYear?, Validate := false) {
-        return DateObj.Parser(DateFormat, RegExOptions, Cache, IfShortYear ?? unset)(DateString, Validate)
+     *  DateStr := '2024-01-28 19:15'
+     *  DateFormat := 'yyyy-MM-dd HH:mm'
+     *  Date := DateObj(DateStr, DateFormat)
+     *  MsgBox(Date.Year '-' Date.Month '-' Date.Day ' ' Date.Hour ':' Date.Minute) ; 2024-01-28 19:15
+     * @
+     * @example
+     *  DateStr := 'Voicemail From <1-555-555-5555> at 2024-01-28 07:15:20'
+     *  DateFormat := 'at \t{yyyy-MM-dd HH:mm:ss}'
+     *  Date := DateObj(DateStr, DateFormat)
+     *  MsgBox(Date.Year '-' Date.Month '-' Date.Day ' ' Date.Hour ':' Date.Minute ':' Date.Second) ; 2024-01-28 07:15:20
+     * @
+     *
+     *   - You can include multiple sets of \t escaped format units.
+     * @example
+     *  DateStr := 'Voicemail From <1-555-555-5555> Received January 28, 2024 at 12:15:20 AM'
+     *  DateFormat := 'Received \t{MMMM dd, yyyy} at \t{hh:mm:ss tt}'
+     *  Date := DateObj(DateStr, DateFormat, 'i)') ; Use case insensitive matching when matching a month by name.
+     *  MsgBox(Date.Year '-' Date.Month '-' Date.Day ' ' Date.Hour ':' Date.Minute ':' Date.Second) ; 2024-01-28 00:15:20
+     * @
+     *
+     *   - You can use the "?" quantifier.
+     * @example
+     *  DateStr1 := 'Voicemail From <1-555-555-5555> Received January 28, 2024 at 12:15 AM'
+     *  DateStr2 := 'Voicemail From <1-555-555-5555> Received January 28, 2024 at 12:15:12 AM'
+     *  DateFormat := 'Received \t{MMMM dd, yyyy} at \t{hh:mm:?ss? tt}'
+     *  Date1 := DateObj(DateStr1, DateFormat, 'i)') ; Use case insensitive matching when matching a month by name.
+     *  Date2 := DateObj(DateStr2, DateFormat, 'i)')
+     *  MsgBox(Date1.Year '-' Date1.Month '-' Date1.Day ' ' Date1.Hour ':' Date1.Minute ':' Date1.Second) ; 2024-01-28 00:15:00
+     *  Date2 := DateObj(DateStr2, DateFormat)
+     *  MsgBox(Date2.Year '-' Date2.Month '-' Date2.Day ' ' Date2.Hour ':' Date2.Minute ':' Date2.Second) ; 2024-01-28 00:15:12
+     * @
+     *
+     *   - The match object is set to the property `DateObjInstance.Match`. Include any extra subcapture
+     * groups that you are interested in.
+     * @example
+     *  DateStr := 'The child was born May 2, 1990, the year of the horse'
+     *  DateFormat := '\t{MMMM d, yyyy}, the year of the (?<animal>\w+)'
+     *  Date := DateObj(DateStr, DateFormat, 'i)') ; Use case insensitive matching when matching a month by name.
+     *  MsgBox(Date.Year '-' Date.Month '-' Date.Day ' ' Date.Hour ':' Date.Minute ':' Date.Second) ; 1990-05-02 00:00:00
+     *  MsgBox(Date.Match['animal']) ; horse
+     * @
+     *
+     * @param {String} [RegExOptions=""] - The RegEx options to add to the beginning of the pattern.
+     * @param {Boolean} [SubcaptureGroup=true] - When true, each \t escaped format group is captured
+     * in an unnamed subcapture group. When false, the function does not include any additional
+     * subcapture groups.
+     * @param {Boolean} [Century] - The century to use when parsing a 1- or 2-digit year. If not set,
+     * the current century is used.
+     * @param {Boolean} [Validate=false] - When true, the values of each property are validated
+     * before the function completes. The values are validated numerically, and if any value exceeds
+     * the maximum value for that property, an error is thrown. For example, if the month is greater
+     * than 13 or the hour is greater than 24, an error is thrown.
+     * @returns {DateObj} - The `DateObj` object.
+     */
+    static Call(DateStr, DateFormat, RegExOptions := '', SubcaptureGroup := true, Century?, Validate := false) {
+        return DateParser(DateFormat, RegExOptions, SubcaptureGroup)(DateStr, Century ?? unset, Validate)
     }
 
     /**
-     * @description - Creates a `DateObj` instance from a timestamp string.
-     * @param {String} Timestamp - The timestamp string to create the `DateObj` instance from.
-     * @returns {DateObj} - The `DateObj` instance.
+     * @description - Creates a `DateObj` object from a timestamp string.
+     * @param {String} Timestamp - The timestamp string to create the `DateObj` object from. `Timestamp`
+     * should at least be 4 characters long containing the year. The rest is optional.
+     * @returns {DateObj} - The `DateObj` object.
      */
     static FromTimestamp(Timestamp) {
-        loop 14 - StrLen(Timestamp) {
-            Timestamp .= '0'
-        }
         ObjSetBase(Date := {
             Year: SubStr(Timestamp, 1, 4)
-          , Month: SubStr(Timestamp, 5, 2)
-          , Day: SubStr(Timestamp, 7, 2)
-          , Hour: SubStr(Timestamp, 9, 2)
-          , Minute: SubStr(Timestamp, 11, 2)
-          , Second: SubStr(Timestamp, 13, 2)
+          , Month: StrLen(Timestamp) > 4 ? SubStr(Timestamp, 5, 2) : unset
+          , Day:  StrLen(Timestamp) > 6 ? SubStr(Timestamp, 7, 2) : unset
+          , Hour:  StrLen(Timestamp) > 8 ? SubStr(Timestamp, 9, 2) : unset
+          , Minute:  StrLen(Timestamp) > 10 ? SubStr(Timestamp, 11, 2) : unset
+          , Second:  StrLen(Timestamp) > 12 ? SubStr(Timestamp, 13, 2) : unset
         }, DateObj.Prototype)
         return Date
     }
@@ -130,69 +119,104 @@ class DateObj extends DateObj.Base {
     }
 
     /**
-     * @description - `TimeUnits` contains the static data needed to parse date strings. This creates
-     * a copy of it.
-     * @returns {Map} - The `TimeUnits` map.
+     * @description - Returns the month index. Indices are 1-based. (January is 1).
+     * @param {String} MonthStr - Three or more of the first characters of the month's name.
+     * @param {Boolean} [TwoDigits=false] - When true, the return value is padded to always be 2 digits.
+     * @returns {String} - The 1-based index.
      */
-    static GetTimeUnits() {
-        TimeUnits := Map(
-              'y', { Name: 'Year', Special: 3, Count: Map(1, '{1,2}', 2, '{2}', 4, '{4}', '?', '{0,4}') }
-            , 'M', { Name: 'Month', Special: 4, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}')  }
-            , 'd', { Name: 'Day', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
-            , 'H', { Name: 'Hour', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
-            , 'h', { Name: 'Hour', Special: 1, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
-            , 'm', { Name: 'Minute', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
-            , 's', { Name: 'Second', Special: 5, Count: Map(1, '{1,2}', 2, '{2}', '?', '{0,2}') }
-            , 't', { Name: 't', Special: 2, Pattern: ['(?<t>[ap]{1})', '(?<t>(?:[ap]m){1})'] }
-        )
-        TimeUnits.Default := ''
-        return TimeUnits
+    static GetMonthIndex(MonthStr, TwoDigits := false) {
+        if TwoDigits {
+            switch SubStr(MonthStr, 1, 3), 0 {
+                case 'jan': return '01'
+                case 'feb': return '02'
+                case 'mar': return '03'
+                case 'apr': return '04'
+                case 'may': return '05'
+                case 'jun': return '06'
+                case 'jul': return '07'
+                case 'aug': return '08'
+                case 'sep': return '09'
+                case 'oct': return '10'
+                case 'nov': return '11'
+                case 'dec': return '12'
+                default:
+                    throw ValueError('Unexpected value for "Month".', -1, MonthStr)
+            }
+        } else {
+            switch SubStr(MonthStr, 1, 3), 0 {
+                case 'jan': return '1'
+                case 'feb': return '2'
+                case 'mar': return '3'
+                case 'apr': return '4'
+                case 'may': return '5'
+                case 'jun': return '6'
+                case 'jul': return '7'
+                case 'aug': return '8'
+                case 'sep': return '9'
+                case 'oct': return '10'
+                case 'nov': return '11'
+                case 'dec': return '12'
+                default:
+                    throw ValueError('Unexpected value for "Month".', -1, MonthStr)
+            }
+        }
     }
 
     /**
-     * @description - Initializes the `TimeUnits` map.
+     * @description - Sets the default values that the date objects will use for the timestamp when
+     * the value is absent.
+     * @param {String} [year] - Year.
+     * @param {String} [month] - Month.
+     * @param {String} [day] - Day.
+     * @param {String} [hour] - Hour.
+     * @param {String} [minute] - Minute.
+     * @param {String} [second] - Second.
+     * @param {String} [options] - Options.
      */
-    static SetTimeUnits() {
-        DateObj.Base.Prototype.DefineProp('__TimeUnits', { Value: this.GetTimeUnits() })
+    static SetDefault(year?, month?, day?, hour?, minute?, second?, options?) {
+        Proto := DateObj.Prototype
+        if IsSet(year)
+            Proto.Year := year
+        if IsSet(month)
+            Proto.Month := month
+        if IsSet(day)
+            Proto.Day := day
+        if IsSet(hour)
+            Proto.Hour := hour
+        if IsSet(minute)
+            Proto.Minute := minute
+        if IsSet(second)
+            Proto.Second := second
+        if IsSet(options)
+            Proto.Options := options
     }
 
     /**
-     * @description - Set a default value that the date objects will use for the timestamp when the
-     * value is absent.
-     * @param {String:Variadic} [Defaults] - When used, the values passed to this function should
-     * consist of alternating name and value pairs, where the name comes before the value. Example:
-     * `DateObj.SetDefault('Hour', '00', 'Minute', '00', 'Year', '2020')`. This will set the default
-     * values for each of the included properties.
-     */
-    static SetDefault(Defaults*) {
-        Proto := DateObj.Base.Prototype
-        if Mod(Defaults.Length, 2)
-            throw ValueError('The number of parameters must be even.', -1)
-        loop Defaults.Length / 2
-            Proto.DefineProp(Defaults[A_Index * 2 - 1], { Value: Defaults[A_Index * 2] })
-    }
-
-    /**
-     * @property {Map} Cache - A cache of `DateObj` instances. The key is the `DateFormat` string,
-     * and the value is the `DateObj` instance.
-     */
-    static Cache := Map()
-
-    /**
-     * @property {DateObj.Parser} Parser - The parser object used to create this `DateObj` instance.
-     * It can be reused to create more `DateObj` instances from the same format string.
+     * @property {DateObj.Parser} Parser - The parser object used to create this `DateObj` object.
+     * It can be reused to create more `DateObj` objects from the same format string.
      */
     Parser := ''
 
     /**
      * @property {Integer} DaySeconds - The number of seconds from midnight.
      */
-    DaySeconds => (this.Hour||0) * 3600 + (this.Minute||0) * 60 + (this.Second||0)
+    DaySeconds => this.Hour * 3600 + this.Minute * 60 + this.Second
     /**
      * @property {String} Timestamp - The timestamp of the date object.
      */
     Timestamp => this.GetTimestamp()
-
+    /**
+     * @property {Integer} YearSeconds - The number of seconds since January 01, 00:00:00 of the current year.
+     */
+    YearSeconds {
+        Get {
+            s := 0
+            loop this.Month - 1 {
+                s += DateObj.GetMonthDays(A_Index) * 24 * 3600
+            }
+            return s + (this.Day - 1) * 24 * 3600 + this.DaySeconds
+        }
+    }
 
     /**
      * {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Standalone_Formats}
@@ -239,9 +263,10 @@ class DateObj extends DateObj.Base {
     YWeek => FormatTime(this.Timestamp ' ' this.Options, 'YWeek')
 
     /**
-     * @description - Adds the time to this object's timestamp, returning a new timestamp.
+     * @description - Adds the time to this object's timestamp.
      * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Number} Time - The amount of time to add.
+     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
+     * Specify a negative number to perform subtraction.
      * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
      * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
      * @returns {String} - The new timestamp.
@@ -251,30 +276,13 @@ class DateObj extends DateObj.Base {
     /**
      * @description - Adds the time to this object's timestamp, then creates a new object.
      * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Number} Time - The amount of time to add.
+     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
+     * Specify a negative number to perform subtraction.
      * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
      * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
-     * @returns {DateObj} - The new `DateObj` instance.
+     * @returns {DateObj} - The new `DateObj` object.
      */
     AddToNew(Time, TimeUnits) => DateObj.FromTimestamp(this.Add(Time, TimeUnits))
-
-    /**
-     * @description - Adds the time to this object's timestamp, modifying this objects value.
-     * @param {Number} Time - The amount of time to add.
-     * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
-     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
-     * @returns {DateObj} - A reference to this object.
-     */
-    Adjust(Time, TimeUnits) {
-        Timestamp := this.Add(Time, TimeUnits)
-        this.Year := SubStr(Timestamp, 1, 4)
-        this.Month := SubStr(Timestamp, 5, 2)
-        this.Day := SubStr(Timestamp, 7, 2)
-        this.Hour := SubStr(Timestamp, 9, 2)
-        this.Minute := SubStr(Timestamp, 11, 2)
-        this.Second := SubStr(Timestamp, 13, 2)
-        return this
-    }
 
     /**
      * @description - Get the difference between two dates.
@@ -287,11 +295,14 @@ class DateObj extends DateObj.Base {
     Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
 
     /**
-     * @description - Get the timestamp from the date object. Note that "global" defaults can
-     * be set from `DateObj.SetDefault()`.
-     * @param {String} [DefaultYear] - The default year to use if the year is not set.
-     * @param {String} [DefaultMonth] - The default month to use if the month is not set.
-     * @param {String} [DefaultDay] - The default day to use if the day is not set.
+     * @description - Get the timestamp from the date object. You can pass default values to
+     * any of the parameters. Also see {@link DateObj.SetDefault}.
+     * @param {String} [DefaultYear] - The default year to use if the year is not set. Defaults to
+     * the current year.
+     * @param {String} [DefaultMonth] - The default month to use if the month is not set. Defaults to
+     * the current month.
+     * @param {String} [DefaultDay] - The default day to use if the day is not set. Defaults to the
+     * current day.
      * @param {String} [DefaultHour='00'] - The default hour to use if the hour is not set.
      * @param {String} [DefaultMinute='00'] - The default minute to use if the minute is not set.
      * @param {String} [DefaultSecond='00'] - The default second to use if the second is not set.
@@ -309,8 +320,8 @@ class DateObj extends DateObj.Base {
     }
 
     /**
-     * @description - Adds options to the timestamp.
-     * @param {String} Options - The options to add to the timestamp.
+     * @description - Adds options that get used when calling any of the time format properties.
+     * @param {String} Options - The options to use.
      * @see https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Additional_Options
      */
     Opt(Options) => this.Options := Options
@@ -319,20 +330,19 @@ class DateObj extends DateObj.Base {
      * @description - Enables the ability to get a numeric value by adding 'N' to the front of a
      * property name.
      * @example
-        Date := DateObj('2024-01-28 19:15', 'yyyy-MM-dd HH:mm')
-        MsgBox(Type(Date.Minute)) ; String
-        MsgBox(Type(Date.NMinute)) ; Integer
-
-        ; AHK handles conversions most of the time anyway.
-        z := 10
-        MsgBox(Date.NMinute + z) ; 25
-        MsgBox(Date.Minute + z) ; 25
-
-        ; Map object keys are strictly typed.
-        m := Map(15, 'val')
-        MsgBox(m[Date.NMinute]) ; 'val'
-        MsgBox(m[Date.Minute]) ; Error: Item has no value.
-
+     *  Date := DateObj('2024-01-28 19:15', 'yyyy-MM-dd HH:mm')
+     *  MsgBox(Type(Date.Minute)) ; String
+     *  MsgBox(Type(Date.NMinute)) ; Integer
+     *
+     *  ; AHK handles conversions most of the time anyway.
+     *  z := 10
+     *  MsgBox(Date.NMinute + z) ; 25
+     *  MsgBox(Date.Minute + z) ; 25
+     *
+     *  ; Map object keys do not convert.
+     *  m := Map(15, 'val')
+     *  MsgBox(m[Date.NMinute]) ; 'val'
+     *  MsgBox(m[Date.Minute]) ; Error: Item has no value.
      * @
      */
     __Get(Name, *) {
@@ -342,483 +352,247 @@ class DateObj extends DateObj.Base {
         throw PropertyError('Unknown property.', -1, Name)
     }
 
-    ; @todo - Add in support for callouts and verbs so they can be used without special handling
-    ; of 'ymdhst' characters. */
-    class Parser extends DateObj.Base {
-        /**
-         * @description - Constructs a `DateObj.Parser` that can be reused to make `DateObj` objects
-         * from date strings.
-         * @param {String} DateFormat - The format of the date string. The format follows the same rules as
-         * described on the AHK `FormatDate` page: {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm}.
-         * - The format string can include any of the following units: 'y', 'M', 'd', 'H', 'h', 'm', 's', 't'.
-         * See the link for details.
-         * - Only numeric day units are recognized by this function. This function will not match with
-         * days like 'Mon', 'Tuesday', etc.
-         * - In addition to the units, RegEx is viable within the format string. To permit compatibility
-         * between the unit characters and RegEx, please adhere to these guidelines:
-         * - If you intend to use any of 'y, m, d, h, s, t' or their capitalized counterparts literally,
-         * you must escape the character with double backticks (e.g. '``y', '``m', '``d', etc.).
-         * - To write a literal backtick followed by one of those letters, use quadruple backticks.
-         * - Characters inside character classes (e.g. '[a-zA-Z]') and inside subcapture group names
-         * (e.g. "mygroup" in `(?<mygroup>``mon|``tue)`) do not need to be escaped.
-         * - All other verbs and special methods available in RegEx require escaped 'ymdhst' characters
-         * with the double backtick, at least until I add support for callouts and verbs without backticks.
-         * - Remember, the whole pattern must match on the date string for the function to succeed, so you
-         * will sometimes want to leverage '.+?' to match arbitary substrings in-between the date units.
-         * @example
-            DateStr := 'Jan 02, 1992 @ 2 after 5 pm'
-            DateFormat := 'MMM dd, yyyy.+?m.+?h tt'
-
-            DateStr := '2024-01-28 19:00'
-            DateFormat := 'yyyy-MM-dd HH:mm'
-
-            DateStr := '2024-01-28 07:00 PM'
-            DateFormat := 'yyyy-MM-dd hh:mm tt'
-
-            DateStr := '12, Dec, around 2 AM'
-            DateFormat := 'dd, MMM.+?h tt'
-
-            ; You can use '?' when a unit may or may not be present in a string. Note that it can be
-            ; challenging to get the pattern to match the way you want when using the '?' quantifier.
-            ; The RegEx engine might skip the unit completely, even when present in the date string,
-            ; if the content of your pattern is ambiguous. In the below example, this matches as expected.
-            ; Without the '``sec' at the end, the pattern does not match correctly with the minutes.
-            DateStr1 := 'In first place at just under 59 seconds'
-            DateStr2 := 'In second place at 1 minute 2 seconds'
-            DateFormat := 'm? \w+ ?s ``sec'
-
-            ; If the '?' quantifier is not working as expected, it might be more effective to group the
-            ; variable units with some nearby text that you know will appear along with the unit.
-            DateStr1 := 'Appointment time: Fri @ 3:30 PM'
-            DateStr2 := 'Appointment time: Fri, March 3, @ 3:30 PM'
-            DateFormat := '(?:, MMMM d,)? @ h:mm tt'
-
-            ; The `RegExMatchInfo` object is set to the property `Match`. If there's other information
-            ; in the string you are interested in, you can capture that in your format string too.
-            DateStr := 'Born March 30, 1992 - the year of the monkey'
-            DateFormat := 'MMMM d, yyyy.+?(?<animal>``year.+)'
-
-            ; You may sometimes want to use single-digit version of a unit insted of the two-digit unit.
-            DateStr1 := '2024-11-28 11:05:01'
-            DateStr2 := '2024-1-9 8:43:09'
-            ; If we use 'yyyy-MM-dd HH:mm:ss', even though it matches the first, it will fail to match
-            ; the second. The below format string will match both.
-            DateFormat := 'yyyy-M-d H:mm:ss'
-        @
-        * @param {Boolean} [RegExOptions='i)'] - The RegEx options to add to the beginning of the pattern.
-        * @param {Integer} [Cache=1] - Any one of the following flags:
-        * - 1: If the `DateFormat` string is in the cache, the associated object will be retrived and
-        * set as this object's base. This instance will inherit the properties from the cached object.
-        * If the current input `IfShortYear` or `RegExOptions` values are different from the values
-        * set on the cached object, this instance will reflect the new values. No further processing
-        * is done to this instance. If `DateFormat` has not been cached, this instance will be added
-        * to the cache with the key being the `DateFormat` string.
-        * - 2: The cache is ignored and a new object is created. Nothing is added to the cache.
-        * - 3: The cache is ignored and a new object is created, and this instance is added to the
-        * cache, overwriting any existing cached object with the same `DateFormat` string.
-        * @param {String} [IfShortYear] - Use this to specify the century when the year is 1 or 2
-        * digits length. When unset, the current century is used. Example: '20' for 2020, or if the
-        * year has 1 digit, '200' for 2009.
-        * @returns {DateObj.Parser} - The `DateObj.Parser` instance.
-        */
-        __New(DateFormat, RegExOptions := 'i)', Cache := 1, IfShortYear?) {
-            static PatternTemplate := '(?<{1}>\d{2})'
-            , PatternMonth := '(?<Month>(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec){1}[a-zA-Z]*)'
-            local TimeUnits, Len, Split, i, Previous, PreviousCount, Char, Descriptor
-            TimeUnits := this.TimeUnits
-            S1 := TimeUnits['h'].Special
-            S2 := TimeUnits['t'].Special
-            S3 := TimeUnits['y'].Special
-            S4 := TimeUnits['M'].Special
-            this.RegExOptions := RegExOptions
-            this.IfShortYear := IfShortYear ?? ''
-            if Cache == 1 {
-                if DateObj.Cache.Has(DateFormat)
-                    ObjSetBase(this, DateObj.Cache.Get(DateFormat))
-                else {
-                    _GetPattern()
-                    DateObj.Cache.Set(DateFormat, this)
-                }
-            } else {
-                _GetPattern()
-                if Cache == 3
-                    DateObj.Cache.Set(DateFormat, this)
-            }
-            if this.HasOwnProp('Special') && this.Special == S1
-                throw ValueError('The input ``DateFormat`` indicates the date string will have 12-hour formatted hours'
-                '`nbut does not include an am/pm indicator to determine what the hours represent in the date string.', -1)
-            return
-
-            _GetPattern() {
-                this.Pattern := ''
-                this.List := []
-                Len := StrLen(DateFormat)
-                Split := StrSplit(DateFormat)
-                i := 1
-                Previous := _ProcessGet()
-                PreviousCount := 1
-                while i < Split.Length {
-                    ++i
-                    Char := _ProcessGet()
-                    if Char == Previous {
-                        PreviousCount++
-                    } else if Previous {
-                        _Process()
-                    } else {
-                        Previous := Char
-                        PreviousCount := 1
-                    }
-                }
-                _Process()
-            }
-            _Process() {
-                if Descriptor := TimeUnits.Get(Previous) {
-                    if Descriptor.Special <= S2 {
-                        if this.HasOwnProp('Special') {
-                            if Descriptor.Special == S1 {
-                                if this.Special == S2
-                                    this.Special := 0
-                                else
-                                    _ThrowSeparateGroupError()
-                            } else if Descriptor.Special == S2 {
-                                if this.Special == S1
-                                    this.Special := 0
-                                else
-                                    _ThrowSeparateGroupError()
-                            }
-                        } else
-                            this.Special := Descriptor.Special
-                    }
-                    if Descriptor.Special == S4 {
-                        if PreviousCount > 2 {
-                            if Char == '?' {
-                                this.Pattern .= Format(PatternMonth, '?')
-                                Char := _ProcessPrepareNext()
-                            } else {
-                                this.Pattern .= Format(PatternMonth, '')
-                            }
-                            this.List.Push(Descriptor)
-                        } else {
-                            if Char == '?' {
-                                this.Pattern .= Format(PatternTemplate, Descriptor.Name, Descriptor.Count['?'])
-                                Char := _ProcessPrepareNext()
-                            } else {
-                                this.Pattern .= Format(PatternTemplate, Descriptor.Name, Descriptor.Count[PreviousCount])
-                            }
-                            this.List.Push({ Name: 'Month', Special: 5 })
-                        }
-                    } else {
-                        if Descriptor.Special == S2 {
-                            if Char == '?' {
-                                this.Pattern .= Format(Descriptor.Pattern[PreviousCount == 1 ? 1 : 2], '?')
-                                Char := _ProcessPrepareNext()
-                            } else {
-                                this.Pattern .= Format(Descriptor.Pattern[PreviousCount == 1 ? 1 : 2], '')
-                            }
-                        } else {
-                            if Char == '?' {
-                                this.Pattern .= Format(PatternTemplate, Descriptor.Name, Descriptor.Count['?'])
-                                Char := _ProcessPrepareNext()
-                            } else {
-                                this.Pattern .= Format(PatternTemplate, Descriptor.Name, Descriptor.Count[PreviousCount])
-                            }
-                            this.List.Push(Descriptor)
-                        }
-                    }
-                } else {
-                    _ProcessAddPrevious()
-                }
-                Previous := Char
-                PreviousCount := 1
-            }
-            _ProcessAddPrevious() {
-                if IsSet(PreviousCount) {
-                    loop PreviousCount
-                        this.Pattern .= Previous
-                } else {
-                    return
-                }
-            }
-            _ProcessCharacterClass() {
-                local Str := Char
-                _ProcessAddPrevious()
-                loop {
-                    Str .= Char := Split[++i]
-                    if Char == ']'
-                        break
-                }
-                this.Pattern .= Str
-                return _ProcessPrepareNext()
-            }
-            _ProcessEscapeSequence() {
-                _ProcessAddPrevious()
-                local Count := 1, Str := Char
-                while (Char := Split[++i]) == '``'
-                    Count++, Str .= Char
-                if Mod(Count, 2) {
-                    switch Char, 0 {
-                        case 'y', 'm', 'd', 'h', 's', 't':
-                            if Count > 1
-                                this.Pattern .= SubStr(Str, 1, -1)
-                            this.Pattern .= Char
-                        default:
-                            this.Pattern .= Str Char
-                    }
-                } else {
-                    this.Pattern .= Str Char
-                }
-                return _ProcessPrepareNext()
-            }
-            _ProcessGet() {
-                if (Char := Split[i]) == '[' {
-                    return _ProcessCharacterClass()
-                } else if Char == '``' {
-                    return _ProcessEscapeSequence()
-                } else if Char == '(' {
-                    return _ProcessGroup()
-                } else {
-                    return Char
-                }
-            }
-            _ProcessGroup() {
-                local Str := Char
-                _ProcessAddPrevious()
-                if (Char := Split[++i]) == '?' {
-                    Str .= Char
-                    loop 2 {
-                        switch (Char := Split[++i]), 0 {
-                            case 'p':
-                                Str .= Char
-                            case '`'':
-                                Str .= Char
-                                while (Char := Split[++i]) !== '`''
-                                    Str .= Char
-                                Str .= Char
-                                break
-                            case '<':
-                                Str .= Char
-                                switch (Char := Split[++i]) {
-                                    case '=', '!':
-                                        Str .= Char
-                                        break
-                                }
-                                Str .= Char
-                                while (Char := Split[++i]) !== '>'
-                                    Str .= Char
-                                Str .= Char
-                                break
-                            default:
-                                this.Pattern .= Str Char
-                                return _ProcessPrepareNext()
-                        }
-                    }
-                } else {
-                    this.Pattern .= Str
-                    return _ProcessPrepareNext()
-                }
-                this.Pattern .= Str
-                return _ProcessPrepareNext()
-            }
-            _ProcessPrepareNext() {
-                Previous := ''
-                if i == Split.Length
-                    return ''
-                ++i
-                return _ProcessGet()
-            }
-            _ThrowSeparateGroupError() {
-                throw ValueError('There are two separate groups of the same unit in the input ``DateFormat``'
-                ', which is invalid.', -2, Previous)
-            }
-        }
-        /**
-         * @description - Parse the input date string and return a `DateObj` instance.
-         * @param {String} DateStr - The date string to parse.
-         * @param {Boolean} [Validate=false] - When true, the values of each property are validated
-         * before the function completes. The values are compared numerically, and if any value exceeds
-         * the maximum value for that property, an error is thrown.
-         * @returns {DateObj} - The `DateObj` instance.
-         */
-        Call(DateStr, Validate := false) {
-            local Match
-            TimeUnits := this.TimeUnits
-            S1 := TimeUnits['h'].Special
-            S2 := TimeUnits['t'].Special
-            S3 := TimeUnits['y'].Special
-            S4 := TimeUnits['M'].Special
-            ObjSetBase(Date := {}, DateObj.Prototype)
-            Date.DefineProp('Parser', { Value: this })
-            Date.DateStr := DateStr
-            if HasProp(this, 'Special')
-                this.Special := 0
-            _ProcessMatch()
-            if Validate
-                _Validate()
-            return Date
-
-            _ProcessMatch() {
-                if !RegExMatch(DateStr, this.RegExOptions this.Pattern, &Match)
-                    return
-                Date.DefineProp('Match', { Value: Match })
-                for Descriptor in this.List {
-                    switch Descriptor.Special {
-                        case S1, S2:
-                            if !HasProp(this, 'Special')
-                                throw Error('The script encountered an internal logic error.', -1)
-                            if this.Special
-                                continue
-                            else
-                                _Handle12HourFormat(Descriptor)
-                        case S3:
-                            _HandleYear(Descriptor)
-                        case S4:
-                            _HandleMonth(Descriptor)
-                        default:
-                            if Match.Len[Descriptor.Name] == 1
-                                Date.DefineProp(Descriptor.Name, { Value: '0' Match[Descriptor.Name] })
-                            else
-                                Date.DefineProp(Descriptor.Name, { Value: Match[Descriptor.Name] })
-                    }
-                }
-            }
-            _Handle12HourFormat(Descriptor) {
-                h := TimeUnits['h'].Name
-                t := TimeUnits['t'].Name
-                Date.DefineProp(t, { Value: Match[t] })
-                n := Number(Match[h])
-                this.Special := 1
-
-                switch SubStr(Match[t], 1, 1), 0 {
-                    case 'a':
-                        if n == 12 {
-                            Date.DefineProp(h, { Value: '00' })
-                        } else if Match.Len[h] == 1 {
-                            Date.DefineProp(h, { Value: '0' Match[h] })
-                        } else {
-                            Date.DefineProp(h, { Value: Match[h] })
-                        }
-                    case 'p':
-                        if n == 12 {
-                            Date.DefineProp(h, { Value: '12' })
-                        } else {
-                            Date.DefineProp(h, { Value: n + 12 })
-                        }
-                }
-            }
-            _HandleMonth(Descriptor) {
-                if !Match[Descriptor.Name]
-                    return
-                Date.DefineProp(Descriptor.Name, { Value: _GetMonth() })
-                _GetMonth() {
-                    switch SubStr(Match[Descriptor.Name], 1, 3), 0 {
-                        case 'jan': return '01'
-                        case 'feb': return '02'
-                        case 'mar': return '03'
-                        case 'apr': return '04'
-                        case 'may': return '05'
-                        case 'jun': return '06'
-                        case 'jul': return '07'
-                        case 'aug': return '08'
-                        case 'sep': return '09'
-                        case 'oct': return '10'
-                        case 'nov': return '11'
-                        case 'dec': return '12'
-                        default:
-                            throw ValueError('The script encountered an unexpected value for "Month".'
-                            , -1, Match[Descriptor.Name])
-                    }
-                }
-            }
-            _HandleYear(Descriptor) {
-                switch StrLen(Match[Descriptor.Name]) {
-                    case 1:
-                        Date.DefineProp(Descriptor.Name, { Value: (this.IfShortYear || SubStr(A_Now, 1, 3)) Match[Descriptor.Name] })
-                    case 2:
-                        Date.DefineProp(Descriptor.Name, { Value: (this.IfShortYear || SubStr(A_Now, 1, 3)) Match[Descriptor.Name] })
-                    case 4:
-                        Date.DefineProp(Descriptor.Name, { Value: Match[Descriptor.Name] })
-                    default:
-                        throw ValueError('The resulting match with the year produced an irregular string length.'
-                        , -1, 'Length: ' Match.Len[Descriptor.Name])
-                }
-            }
-            _Validate() {
-                if Date.NMonth > 12
-                    _ThrowInvalidResultError('Month: ' Date.Month)
-                ; If we don't know the year and the month is February, use 29 as the value by default
-                if Date.Month == '02' && !Date.Year {
-                    if Date.NDay > 29
-                        _ThrowInvalidResultError('Day: ' Date.Day)
-                } else if Date.NDay > DateObj.GetMonthDays(Date.NMonth, Date.NYear)
-                    _ThrowInvalidResultError('Day: ' Date.Day)
-                if Date.NHour > 24
-                    _ThrowInvalidResultError('Hour: ' Date.Hour)
-                if Date.NMinute > 60
-                    _ThrowInvalidResultError('Minute: ' Date.Minute)
-                if Date.NSecond > 60
-                    _ThrowInvalidResultError('Second: ' Date.Second)
-            }
-            _ThrowInvalidResultError(Value) {
-                throw ValueError('The result produced an invalid date.', -2, Value)
-            }
-        }
-    }
-
-    class Base {
-        /**
-         * @description - The `TimeUnits` property contains a map with the static data needed to parse
-         * date strings. It can be adjusted if needed. It's best to adjust it from the instance
-         * `DateObj.Parser` object, so as to not override the default values for all instances. You
-         * can get a copy of it by calling `DateObj.GetTimeUnits()`.
-         */
-        TimeUnits[Char?] {
-            Get {
-                if !HasProp(this, '__TimeUnits')
-                    DateObj.SetTimeUnits()
-                return IsSet(Char) ? this.__TimeUnits.Get(Char) : this.__TimeUnits
-            }
-            Set {
-                if !HasProp(this, '__TimeUnits')
-                    DateObj.SetChars()
-                if IsSet(Char)
-                    this.__TimeUnits.Set(Char, Value)
-                else
-                    this.DefineProp('__TimeUnits', { Value: Value })
-            }
-        }
-        Year {
-            Get => HasProp(this, '__Year') ? this.__Year : this.__Year := ''
-            Set => this.__Year := Value
-        }
-        Month {
-            Get => HasProp(this, '__Month') ? this.__Month : this.__Month := ''
-            Set => this.__Month := Value
-        }
-        Day {
-            Get => HasProp(this, '__Day') ? this.__Day : this.__Day := ''
-            Set => this.__Day := Value
-        }
-        Hour {
-            Get => HasProp(this, '__Hour') ? this.__Hour : this.__Hour := ''
-            Set => this.__Hour := Value
-        }
-        Minute {
-            Get => HasProp(this, '__Minute') ? this.__Minute : this.__Minute := ''
-            Set => this.__Minute := Value
-        }
-        Second {
-            Get => HasProp(this, '__Second') ? this.__Second : this.__Second := ''
-            Set => this.__Second := Value
-        }
-        Options {
-            Get => HasProp(this, '__Options') ? this.__Options : this.__Options := ''
-            Set => this.__Options := Value
-        }
-        t {
-            Get => HasProp(this, '__t') ? this.__t : this.__t := ''
-            Set => this.__t := Value
+    static __New() {
+        if this.Prototype.__Class == 'DateObj' {
+            Proto := this.Prototype
+            Proto.Year := SubStr(A_Now, 1, 4)
+            Proto.Month := '01'
+            Proto.Day := '01'
+            Proto.Hour := '00'
+            Proto.Minute := '00'
+            Proto.Second := '00'
+            Proto.Options := ''
         }
     }
 }
 
+class DateParser {
 
+    /**
+     * @description - Contains three built-in patterns to parse date strings. These are the literal patterns:
+     * @example
+     *  p1 := '(?<Year>\d{4}).(?<Month>\d{1,2}).(?<Day>\d{1,2})(?:.+?(?<Hour>\d{1,2}).(?<Minute>\d{1,2})(?:.(?<Second>\d{1,2}))?)?'
+     *  p2 := '(?<Month>\d{1,2}).(?<Day>\d{1,2}).(?<Year>(?:\d{4}|\d{2}))(?:.+?(?<Hour>\d{1,2}).(?<Minute>\d{1,2})(?:.(?<Second>\d{1,2}))?)?'
+     *  p3 := '(?<Hour>\d{1,2}):(?<Minute>\d{1,2})(?::(?<Second>\d{1,2}))?'
+     * @
+     *
+     * The patterns represent strings like these. This is not an exhaustive list:
+     * "yyyy-M-d H:m:s" - the time units are optional, seconds optional within the time units
+     * "M/d/yyyy H:m:s" - the time units are optional, seconds optional within the time units
+     * "M/d/yy H:m:s" - the time units are optional, seconds optional within the time units
+     * "h:m:s" - time by itself, the seconds optional
+     *
+     * @param {String} DateStr - The date string to parse.
+     * @returns {DateObj} - The `DateObj` object.
+     */
+    static Parse(DateStr) {
+        if RegExMatch(DateStr, '(?<Year>\d{4}).(?<Month>\d{1,2}).(?<Day>\d{1,2})(?:.+?(?<Hour>\d{1,2}).(?<Minute>\d{1,2})(?:.(?<Second>\d{1,2}))?)?', &match)
+        || RegExMatch(DateStr, '(?<Month>\d{1,2}).(?<Day>\d{1,2}).(?<Year>(?:\d{4}|\d{2}))(?:.+?(?<Hour>\d{1,2}).(?<Minute>\d{1,2})(?:.(?<Second>\d{1,2}))?)?', &match) {
+            ObjSetBase(Date := {
+                Year: match.Len['Year'] == 2 ? SubStr(A_Now, 1, 2) match['Year'] : match['Year']
+              , Month: (match.Len['Month'] == 1 ? '0' : '') match['Month']
+              , Day: (match.Len['Day'] == 1 ? '0' : '') match['Day']
+              , Hour: match.Len['Hour'] ? (match.Len['Hour'] == 1 ? '0' : '') match['Hour'] : unset
+              , Minute: match.Len['Minute'] ? (match.Len['Minute'] == 1 ? '0' : '') match['Minute'] : unset
+              , Second: match.Len['Second'] ? (match.Len['Second'] == 1 ? '0' : '') match['Second'] : unset
+            }, DateObj.Prototype)
+        } else if RegExMatch(DateStr, '(?<Hour>\d{1,2}):(?<Minute>\d{1,2})(?::(?<Second>\d{1,2}))?', &match) {
+            ObjSetBase(Date := {
+                Hour: (match.Len['Hour'] == 1 ? '0' : '') match['Hour']
+              , Minute: (match.Len['Minute'] == 1 ? '0' : '') match['Minute']
+              , Second: match['Second'] ? (match.Len['Second'] == 1 ? '0' : '') match['Second'] : unset
+            }, DateObj.Prototype)
+        }
+        Date.Match := match
+        return Date
+    }
+
+    /**
+     * @description - Creates a `DateParser` object that can be reused to create `DateObj` objects.
+     * @param {String} DateFormat - The format of the date string. See the `DateObj.Call`
+     * description for details.
+     * @param {String} [RegExOptions=""] - The RegEx options to add to the beginning of the pattern.
+     * @param {Boolean} [SubcaptureGroup=true] - When true, each \t escaped format group is captured
+     * in an unnamed subcapture group. When false, the function does not include any additional
+     * subcapture groups.
+     * @returns {DateParser} - The `DateParser` object.
+     */
+    __New(DateFormat, RegExOptions := '', SubcaptureGroup := true) {
+        rc := Chr(0xFFFD) ; replacement character
+        replacement := []
+        replacement.Capacity := 20
+        flag_period := false
+        pos := 1
+        i := 0
+        while RegExMatch(DateFormat, '\\t\{([^}]+)\}', &matchgroup, pos) {
+            copy := matchgroup[1]
+            pos := matchgroup.Pos + matchgroup.Len
+            _Proc(&copy)
+            if SubcaptureGroup {
+                DateFormat := StrReplace(DateFormat, matchgroup[0], '(' copy ')', , , 1)
+            } else {
+                DateFormat := StrReplace(DateFormat, matchgroup[0], '(?:' copy ')', , , 1)
+            }
+        }
+        if !i {
+            _Proc(&DateFormat)
+        }
+        if this.12hour && !flag_period {
+            throw Error('The date format string indicates 12-hour time format, but does not include an AM/PM indicator', -1)
+        }
+        for r in replacement {
+            DateFormat := StrReplace(DateFormat, r.temp, r.pattern, , , 1)
+        }
+        this.RegExOptions := RegExOptions
+        this.Pattern := DateFormat
+
+        _Proc(&p) {
+            if RegExMatch(p, '(y+)(\??)', &match) {
+                replacement.Push({ pattern: '(?<Year>\d{' (match.Len[1] == 1 ? '1,2' : match.Len[1]) '})' match[2], temp: rc (++i) rc })
+                p := StrReplace(p, match[0], replacement[-1].temp, true, , 1)
+            }
+            if RegExMatch(p, '(M+)(\??)', &match) {
+                if match.Len[1] == 1 {
+                    pattern := '(?<Month>\d{1,2})'
+                } else if match.Len[1] == 2 {
+                    pattern := '(?<Month>\d{2})'
+                } else if match.Len[1] == 3 {
+                    pattern := '(?<Month>(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))'
+                } else if match.Len[1] == 4 {
+                    pattern := '(?<Month>(?:january|february|march|april|may|june|july|august|september|october|november|december))'
+                }
+                replacement.Push({ pattern: pattern match[2], temp: rc (++i) rc })
+                p := StrReplace(p, match[0], replacement[-1].temp, true, , 1)
+            }
+            if RegExMatch(p, '(h+)(\??)', &match) {
+                replacement.Push({ pattern: '(?<Hour>\d{' (match.Len[1] == 1 ? '1,2' : '2') '})' match[2], temp: rc (++i) rc })
+                p := StrReplace(p, match[0], replacement[-1].temp, true, , 1)
+                this.12hour := true
+            }
+            if RegExMatch(p, '(t+)(\??)', &match) {
+                if match.Len[1] == 1 {
+                    pattern := '(?<Period>[ap])'
+                } else {
+                    pattern := '(?<Period>[ap]m)'
+                }
+                replacement.Push({ pattern: pattern match[2], temp: rc (++i) rc })
+                p := StrReplace(p, match[0], replacement[-1].temp, true, , 1)
+                flag_period := true
+            }
+            for ch, name in Map('d', 'Day', 'H', 'Hour', 'm', 'Minute', 's', 'Second') {
+                if RegExMatch(p, '(' ch '+)(\??)', &match) {
+                    replacement.Push({ pattern: '(?<' name '>\d{' (match.Len[1] == 1 ? '1,2' : '2') '})' match[2], temp: rc (++i) rc })
+                    p := StrReplace(p, match[0], replacement[-1].temp, true, , 1)
+                }
+            }
+        }
+    }
+
+    /**
+     * @description - Parses the input date string and returns a `DateObj` object.
+     * @param {String} DateStr - The date string to parse.
+     * @param {String} [Century] - The century to use when parsing a 1- or 2-digit year. If not set,
+     * the current century is used.
+     * @param {Boolean} [Validate=false] - When true, the values of each property are validated
+     * before the function completes. The values are validated numerically, and if any value exceeds
+     * the maximum value for that property, an error is thrown. For example, if the month is greater
+     * than 13 or the hour is greater than 24, an error is thrown.
+     * @returns {DateObj} - The `DateObj` object.
+     */
+    Call(DateStr, Century?, Validate := false) {
+        local Match
+        if !RegExMatch(DateStr, this.RegExOptions this.Pattern, &match) {
+            return ''
+        }
+        ObjSetBase(Date := {}, DateObj.Prototype)
+        Date.DefineProp('Parser', { Value: this })
+        Date.DefineProp('Match', { Value: match })
+        for unit, str in match {
+            switch unit {
+                case 'Year':
+                    if match.Len['Year'] {
+                        switch match.Len['Year'] {
+                            case 1: Date.DefineProp('Year', { Value: (Century ?? SubStr(A_Now, 1, 3)) match['Year'] })
+                            case 2: Date.DefineProp('Year', { Value: (Century ?? SubStr(A_Now, 1, 2)) match['Year'] })
+                            case 4: Date.DefineProp('Year', { Value: match['Year'] })
+                        }
+                    }
+                case 'Month':
+                    if match.Len['Month'] {
+                        if IsNumber(match['Month']) {
+                            if match.Len['Month'] == 1 {
+                                Date.DefineProp('Month', { Value: '0' match['Month'] })
+                            } else {
+                                Date.DefineProp('Month', { Value: match['Month'] })
+                            }
+                        } else {
+                            Date.DefineProp('Month', { Value: DateObj.GetMonthIndex(match['Month'], true) })
+                        }
+                    }
+                case 'Hour':
+                    if match.Len['Hour'] {
+                        if this.12hour {
+                            n := Number(match['Hour'])
+                            switch SubStr(match['Period'], 1, 1), 0 {
+                                case 'a':
+                                    if n == 12 {
+                                        Date.DefineProp('Hour', { Value: '00' })
+                                    } else if Match.Len['Hour'] == 1 {
+                                        Date.DefineProp('Hour', { Value: '0' match['Hour'] })
+                                    } else {
+                                        Date.DefineProp('Hour', { Value: match['Hour'] })
+                                    }
+                                case 'p':
+                                    if n == 12 {
+                                        Date.DefineProp('Hour', { Value: '12' })
+                                    } else {
+                                        Date.DefineProp('Hour', { Value: String(n + 12) })
+                                    }
+                            }
+                        } else {
+                            if match.Len['Hour'] == 1 {
+                                Date.DefineProp('Hour', { Value: '0' match['Hour'] })
+                            } else if match.Len['Hour'] == 2 {
+                                Date.DefineProp('Hour', { Value: match['Hour'] })
+                            }
+                        }
+                    }
+                case 'Minute', 'Second', 'Day':
+                    if match.Len[unit] {
+                        if match.Len[unit] == 1 {
+                            Date.DefineProp(unit, { Value: '0' match[unit] })
+                        } else if match.Len[unit] == 2 {
+                            Date.DefineProp(unit, { Value: match[unit] })
+                        }
+                    }
+            }
+        }
+        if Validate {
+            if Date.NMonth > 12
+                _ThrowInvalidResultError('Month: ' Date.Month)
+            ; If we don't know the year and the month is February, use 29 as the value by default
+            if Date.Month == '02' && !Date.Year {
+                if Date.NDay > 29
+                    _ThrowInvalidResultError('Day: ' Date.Day)
+            } else if Date.NDay > DateObj.GetMonthDays(Date.NMonth, Date.NYear)
+                _ThrowInvalidResultError('Day: ' Date.Day)
+            if Date.NHour > 24
+                _ThrowInvalidResultError('Hour: ' Date.Hour)
+            if Date.NMinute > 60
+                _ThrowInvalidResultError('Minute: ' Date.Minute)
+            if Date.NSecond > 60
+                _ThrowInvalidResultError('Second: ' Date.Second)
+        }
+        return Date
+
+        _ThrowInvalidResultError(Value) {
+            throw ValueError('The result produced an invalid date.', -2, Value)
+        }
+    }
+
+    static __New() {
+        if this.Prototype.__Class == 'DateParser' {
+            this.Prototype.12hour := false
+        }
+    }
+}
