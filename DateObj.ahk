@@ -19,7 +19,7 @@ class DateObj {
      * days like 'Mon', 'Tuesday', etc.
      * - In addition to the units, RegEx is viable within the format string. To permit compatibility
      * between the unit characters and RegEx, please adhere to these guidelines:
-     *   - If the format string contains one or more literal "y", "M", "d", "H", "h", "m", "s" or ="t"
+     *   - If the format string contains one or more literal "y", "M", "d", "H", "h", "m", "s" or "t"
      * characters, you must escape the date format units using this escape: \t{...}
      * @example
      *  DateStr := '2024-01-28 19:15'
