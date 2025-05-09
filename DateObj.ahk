@@ -12,14 +12,14 @@ class DateObj {
      * parser is created in the process, and is available from the property `DateObjInstance.Parser`.
      * @param {String} DateStr - The date string to parse.
      * @param {String} DateFormat - The format of the date string. The format follows the same rules as
-     * described on the AHK `FormatDate` page: {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm}.
+     * described on the AHK `FormatTime` page: {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm}.
      * - The format string can include any of the following units: 'y', 'M', 'd', 'H', 'h', 'm', 's', 't'.
      * See the link for details.
      * - Only numeric day units are recognized by this function. This function will not match with
      * days like 'Mon', 'Tuesday', etc.
      * - In addition to the units, RegEx is viable within the format string. To permit compatibility
      * between the unit characters and RegEx, please adhere to these guidelines:
-     *   - If the format string contains one or more literal "y", "M", "d", "H", "h", "m", "s" or "t"
+     *   - If the format string contains one or more literal "y", "M", "d", "H", "h", "m", "s" or ="t"
      * characters, you must escape the date format units using this escape: \t{...}
      * @example
      *  DateStr := '2024-01-28 19:15'
@@ -65,6 +65,7 @@ class DateObj {
      * @
      *
      * @param {String} [RegExOptions=""] - The RegEx options to add to the beginning of the pattern.
+     * Include the close parenthesis, e.g. "i)".
      * @param {Boolean} [SubcaptureGroup=true] - When true, each \t escaped format group is captured
      * in an unnamed subcapture group. When false, the function does not include any additional
      * subcapture groups.
@@ -73,7 +74,7 @@ class DateObj {
      * @param {Boolean} [Validate=false] - When true, the values of each property are validated
      * before the function completes. The values are validated numerically, and if any value exceeds
      * the maximum value for that property, an error is thrown. For example, if the month is greater
-     * than 13 or the hour is greater than 24, an error is thrown.
+     * than 12 or the hour is greater than 24, an error is thrown.
      * @returns {DateObj} - The `DateObj` object.
      */
     static Call(DateStr, DateFormat, RegExOptions := '', SubcaptureGroup := true, Century?, Validate := false) {
@@ -297,30 +298,27 @@ class DateObj {
     /**
      * @description - Get the timestamp from the date object. You can pass default values to
      * any of the parameters. Also see {@link DateObj.SetDefault}.
-     * @param {String} [DefaultYear] - The default year to use if the year is not set. Defaults to
-     * the current year.
-     * @param {String} [DefaultMonth] - The default month to use if the month is not set. Defaults to
-     * the current month.
-     * @param {String} [DefaultDay] - The default day to use if the day is not set. Defaults to the
-     * current day.
-     * @param {String} [DefaultHour='00'] - The default hour to use if the hour is not set.
-     * @param {String} [DefaultMinute='00'] - The default minute to use if the minute is not set.
-     * @param {String} [DefaultSecond='00'] - The default second to use if the second is not set.
+     * @param {String} [DefaultYear] - The default year to use if the year is not set.
+     * @param {String} [DefaultMonth] - The default month to use if the month is not set.
+     * @param {String} [DefaultDay] - The default day to use if the day is not set.
+     * @param {String} [DefaultHour] - The default hour to use if the hour is not set.
+     * @param {String} [DefaultMinute] - The default minute to use if the minute is not set.
+     * @param {String} [DefaultSecond] - The default second to use if the second is not set.
      * @returns {String} - The timestamp.
      */
-    GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour := '00', DefaultMinute := '00', DefaultSecond := '00') {
+    GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour?, DefaultMinute?, DefaultSecond?) {
         return (
-            (this.Year || DefaultYear ?? SubStr(A_Now, 1, 4))
-            (this.Month || DefaultMonth ?? SubStr(A_Now, 5, 2))
-            (this.Day || DefaultDay ?? SubStr(A_Now, 7, 2))
-            (this.Hour || DefaultHour)
-            (this.Minute || DefaultMinute)
-            (this.Second || DefaultSecond)
+            (this.Year || DefaultYear ?? this.Base.Year)
+            (this.Month || DefaultMonth ?? this.Base.Month)
+            (this.Day || DefaultDay ?? this.Base.Day)
+            (this.Hour || DefaultHour ?? this.Base.Hour)
+            (this.Minute || DefaultMinute ?? this.Base.Minute)
+            (this.Second || DefaultSecond ?? this.Base.Second)
         )
     }
 
     /**
-     * @description - Adds options that get used when calling any of the time format properties.
+     * @description - Adds options that get used when accessing any of the time format properties.
      * @param {String} Options - The options to use.
      * @see https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Additional_Options
      */
@@ -412,6 +410,7 @@ class DateParser {
      * @param {String} DateFormat - The format of the date string. See the `DateObj.Call`
      * description for details.
      * @param {String} [RegExOptions=""] - The RegEx options to add to the beginning of the pattern.
+     * Include the close parenthesis, e.g. "i)".
      * @param {Boolean} [SubcaptureGroup=true] - When true, each \t escaped format group is captured
      * in an unnamed subcapture group. When false, the function does not include any additional
      * subcapture groups.
