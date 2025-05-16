@@ -308,12 +308,12 @@ class DateObj {
      */
     GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour?, DefaultMinute?, DefaultSecond?) {
         return (
-            (this.Year || DefaultYear ?? this.Base.Year)
-            (this.Month || DefaultMonth ?? this.Base.Month)
-            (this.Day || DefaultDay ?? this.Base.Day)
-            (this.Hour || DefaultHour ?? this.Base.Hour)
-            (this.Minute || DefaultMinute ?? this.Base.Minute)
-            (this.Second || DefaultSecond ?? this.Base.Second)
+            (this.HasOwnProp('Year') ? this.Year : DefaultYear ?? this.Base.Year)
+            (this.HasOwnProp('Month') ? this.Month : DefaultMonth ?? this.Base.Month)
+            (this.HasOwnProp('Day') ? this.Day : DefaultDay ?? this.Base.Day)
+            (this.HasOwnProp('Hour') ? this.Hour : DefaultHour ?? this.Base.Hour)
+            (this.HasOwnProp('Minute') ? this.Minute : DefaultMinute ?? this.Base.Minute)
+            (this.HasOwnProp('Second') ? this.Second : DefaultSecond ?? this.Base.Second)
         )
     }
 
