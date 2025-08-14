@@ -272,7 +272,7 @@ class DateObj {
      * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
      * @returns {String} - The new timestamp.
      */
-    Add(Time, TimeUnits) => DateAdd(this.Timestamp, Time, TimeUnits)
+    Add(Time, TimeUnits) => this.Set(DateAdd(this.Timestamp, Time, TimeUnits))
 
     /**
      * @description - Adds the time to this object's timestamp, then creates a new object.
