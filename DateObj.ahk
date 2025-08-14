@@ -295,6 +295,8 @@ class DateObj {
      */
     Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
 
+    Get(FormatStr) => FormatTime(this.Timestamp ' ' this.Options, FormatStr)
+
     /**
      * @description - Get the timestamp from the date object. You can pass default values to
      * any of the parameters. Also see {@link DateObj.SetDefault}.
