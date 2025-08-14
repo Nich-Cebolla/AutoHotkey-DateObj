@@ -326,6 +326,25 @@ class DateObj {
      */
     Opt(Options) => this.Options := Options
 
+    Set(Timestamp) {
+        this.Year := SubStr(Timestamp, 1, 4)
+        if StrLen(Timestamp) > 4 {
+            this.Month := SubStr(Timestamp, 5, 2)
+        }
+        if StrLen(Timestamp) > 6 {
+            this.Day := SubStr(Timestamp, 7, 2)
+        }
+        if StrLen(Timestamp) > 8 {
+            this.Hour := SubStr(Timestamp, 9, 2)
+        }
+        if StrLen(Timestamp) > 10 {
+            this.Minute := SubStr(Timestamp, 11, 2)
+        }
+        if StrLen(Timestamp) > 12 {
+            this.Second := SubStr(Timestamp, 13, 2)
+        }
+    }
+
     /**
      * @description - Enables the ability to get a numeric value by adding 'N' to the front of a
      * property name.
