@@ -109,19 +109,18 @@ class DateObj {
 
     /**
      * @description - Creates a {@link DateObj} object from a timestamp string.
-     * @param {String} Timestamp - The timestamp string to create the {@link DateObj} object from. `Timestamp`
-     * should at least be 4 characters long containing the year. The rest is optional.
+     * @param {String} [Timestamp] - The timestamp string from which to create the {@link DateObj}
+     * object. `Timestamp` should at least be 4 characters long containing the year. The rest is
+     * optional. If unset, `A_Now` is used.
      * @returns {DateObj} - The {@link DateObj} object.
      */
-    static FromTimestamp(Timestamp) {
-        ObjSetBase(Date := {
-            Year: SubStr(Timestamp, 1, 4)
-          , Month: StrLen(Timestamp) > 4 ? SubStr(Timestamp, 5, 2) : unset
-          , Day:  StrLen(Timestamp) > 6 ? SubStr(Timestamp, 7, 2) : unset
-          , Hour:  StrLen(Timestamp) > 8 ? SubStr(Timestamp, 9, 2) : unset
-          , Minute:  StrLen(Timestamp) > 10 ? SubStr(Timestamp, 11, 2) : unset
-          , Second:  StrLen(Timestamp) > 12 ? SubStr(Timestamp, 13, 2) : unset
-        }, DateObj.Prototype)
+    static FromTimestamp(Timestamp?) {
+        if !IsSet(Timestamp) {
+            Timestamp := A_Now
+        }
+        Date := {}
+        ObjSetBase(Date, this.Prototype)
+        Date.Set(Timestamp)
         return Date
     }
 
@@ -143,7 +142,7 @@ class DateObj {
     /**
      * @description - Returns the month index. Indices are 1-based. (January is 1).
      * @param {String} MonthStr - Three or more of the first characters of the month's name.
-     * @param {Boolean} [TwoDigits=false] - When true, the return value is padded to always be 2 digits.
+     * @param {Boolean} [TwoDigits = false] - When true, the return value is padded to always be 2 digits.
      * @returns {String} - The 1-based index.
      */
     static GetMonthIndex(MonthStr, TwoDigits := false) {
@@ -161,8 +160,7 @@ class DateObj {
                 case 'oct': return '10'
                 case 'nov': return '11'
                 case 'dec': return '12'
-                default:
-                    throw ValueError('Unexpected value for "Month".', -1, MonthStr)
+                default: _Throw()
             }
         } else {
             switch SubStr(MonthStr, 1, 3), 0 {
@@ -178,39 +176,29 @@ class DateObj {
                 case 'oct': return '10'
                 case 'nov': return '11'
                 case 'dec': return '12'
-                default:
-                    throw ValueError('Unexpected value for "Month".', -1, MonthStr)
+                default: _Throw()
             }
+        }
+        _Throw() {
+            throw ValueError('Unexpected value for ``MonthStr``.', -1, MonthStr)
         }
     }
 
     /**
      * @description - Sets the default values that the date objects will use for the timestamp when
      * the value is absent.
-     * @param {String} [year] - Year.
-     * @param {String} [month] - Month.
-     * @param {String} [day] - Day.
-     * @param {String} [hour] - Hour.
-     * @param {String} [minute] - Minute.
-     * @param {String} [second] - Second.
-     * @param {String} [options] - Options.
+     * @param {String|Integer} Value - The default value.
+     * @param {String} Name - The name of the property. Specifically, one of the following: Year,
+     * Month, Day, Hour, Minute, Second, Options.
      */
-    static SetDefault(year?, month?, day?, hour?, minute?, second?, options?) {
-        Proto := DateObj.Prototype
-        if IsSet(year)
-            Proto.Year := year
-        if IsSet(month)
-            Proto.Month := month
-        if IsSet(day)
-            Proto.Day := day
-        if IsSet(hour)
-            Proto.Hour := hour
-        if IsSet(minute)
-            Proto.Minute := minute
-        if IsSet(second)
-            Proto.Second := second
-        if IsSet(options)
-            Proto.Options := options
+    static SetDefault(Value, Name) {
+        if Name = 'Options' {
+            this.Prototype.Options := Value
+        } else if Name = 'Year' {
+            this.Prototype.SetYear(Value)
+        } else {
+            this.Prototype.SetValue(Value, Name)
+        }
     }
     /**
      * Sets the default century that is used when the {@link DateObj#Year} property is updated with
@@ -300,12 +288,12 @@ class DateObj {
      */
     GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour?, DefaultMinute?, DefaultSecond?) {
         return (
-            (this.HasOwnProp('Year') ? this.Year : DefaultYear ?? this.Base.Year)
-            (this.HasOwnProp('Month') ? this.Month : DefaultMonth ?? this.Base.Month)
-            (this.HasOwnProp('Day') ? this.Day : DefaultDay ?? this.Base.Day)
-            (this.HasOwnProp('Hour') ? this.Hour : DefaultHour ?? this.Base.Hour)
-            (this.HasOwnProp('Minute') ? this.Minute : DefaultMinute ?? this.Base.Minute)
-            (this.HasOwnProp('Second') ? this.Second : DefaultSecond ?? this.Base.Second)
+            (this.HasOwnProp('__Year') ? this.Year : DefaultYear ?? this.Year)
+            (this.HasOwnProp('__Month') ? this.Month : DefaultMonth ?? this.Month)
+            (this.HasOwnProp('__Day') ? this.Day : DefaultDay ?? this.Day)
+            (this.HasOwnProp('__Hour') ? this.Hour : DefaultHour ?? this.Hour)
+            (this.HasOwnProp('__Minute') ? this.Minute : DefaultMinute ?? this.Minute)
+            (this.HasOwnProp('__Second') ? this.Second : DefaultSecond ?? this.Second)
         )
     }
 
@@ -353,8 +341,8 @@ class DateObj {
      * Updates the year value.
      * @param {String|Integer} Year - The year value
      * @returns {String} - The new timestamp
-     * @throws {ValueError} - "The input `Year` is one digit, but the default century value is not
-     * three digits, so the correct year cannot be constructed."
+     * @throws {ValueError} - "The input `Year` is one digit, but the default century value is
+     * less than three digits, so the correct year cannot be constructed."
      * @throws {ValueError} - "The input `Year` is two digits, but the default century value is
      * less than two digits, so the correct year cannot be constructed."
      * @throws {ValueError} - "Unexpected `Year`.". This occurs if the length of `Year` is not
@@ -363,13 +351,13 @@ class DateObj {
     SetYear(Year) {
         switch StrLen(Year) {
             case 1:
-                if StrLen(this.DefaultCentury) == 3 {
+                if StrLen(this.DefaultCentury) >= 3 {
                     this.DefineProp('__Year', { Value: this.DefaultCentury Year })
                 } else {
                     ; If you get this error, see static method `DateObj.SetDefaultCentury`.
                     throw ValueError('The input ``Year`` is one digit, but the default century'
-                    ' value is not three digits, so the correct year cannot be constructed.', -1
-                    , Year)
+                    ' value is less than three digits, so the correct year cannot be constructed.'
+                    , -1, Year)
                 }
             case 2:
                 if StrLen(this.DefaultCentury) >= 2 {
@@ -392,7 +380,7 @@ class DateObj {
      * @param {String} Unit - The meaning of `Value`.
      * @returns {String} - The new timestamp.
      */
-    SetTimeValue(Value, Unit) {
+    SetValue(Value, Unit) {
         this.DefineProp('__' Unit, { Value: StrLen(Value) == 1 ? '0' Value : Value })
         return this.Timestamp
     }
@@ -538,7 +526,7 @@ class DateObj {
      */
     Month {
         Get => this.__Month
-        Set => this.SetTimeValue(Value, 'Month')
+        Set => this.SetValue(Value, 'Month')
     }
     /**
      * The day value.
@@ -548,7 +536,7 @@ class DateObj {
      */
     Day {
         Get => this.__Day
-        Set => this.SetTimeValue(Value, 'Day')
+        Set => this.SetValue(Value, 'Day')
     }
     /**
      * The hour value.
@@ -558,7 +546,7 @@ class DateObj {
      */
     Hour {
         Get => this.__Hour
-        Set => this.SetTimeValue(Value, 'Hour')
+        Set => this.SetValue(Value, 'Hour')
     }
     /**
      * The minute value.
@@ -568,7 +556,7 @@ class DateObj {
      */
     Minute {
         Get => this.__Minute
-        Set => this.SetTimeValue(Value, 'Minute')
+        Set => this.SetValue(Value, 'Minute')
     }
     /**
      * The second value.
@@ -578,7 +566,7 @@ class DateObj {
      */
     Second {
         Get => this.__Second
-        Set => this.SetTimeValue(Value, 'Second')
+        Set => this.SetValue(Value, 'Second')
     }
 }
 
