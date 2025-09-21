@@ -1,14 +1,40 @@
 ﻿/*
     Github: https://github.com/Nich-Cebolla/AutoHotkey-DateObj/blob/main/DateObj.ahk
     Author: Nich-Cebolla
-    Version: 2.0.0
+    Version: 2.1.0
     License: MIT
 */
 
 class DateObj {
+    static __New() {
+        this.DeleteProp('__New')
+        proto := this.Prototype
+        proto.__Year := SubStr(A_Now, 1, 4)
+        proto.__Month := '01'
+        proto.__Day := '01'
+        proto.__Hour := '00'
+        proto.__Minute := '00'
+        proto.__Second := '00'
+        proto.Options := proto.Parser := ''
+        proto.DefaultCentury := SubStr(A_Now, 1, 3)
+        this.MonthDays := [
+            31      ; 1
+          , ''      ; 2
+          , 31      ; 3
+          , 30      ; 4
+          , 31      ; 5
+          , 30      ; 6
+          , 31      ; 7
+          , 31      ; 8
+          , 30      ; 9
+          , 31      ; 10
+          , 30      ; 11
+          , 31      ; 12
+        ]
+    }
 
     /**
-     * @description - Creates a `DateObj` instance from a date string and date format string. The
+     * @description - Creates a {@link DateObj} instance from a date string and date format string. The
      * parser is created in the process, and is available from the property `DateObjInstance.Parser`.
      * @param {String} DateStr - The date string to parse.
      * @param {String} DateFormat - The format of the date string. The format follows the same rules as
@@ -75,17 +101,17 @@ class DateObj {
      * before the function completes. The values are validated numerically, and if any value exceeds
      * the maximum value for that property, an error is thrown. For example, if the month is greater
      * than 12 or the hour is greater than 24, an error is thrown.
-     * @returns {DateObj} - The `DateObj` object.
+     * @returns {DateObj} - The {@link DateObj} object.
      */
     static Call(DateStr, DateFormat, RegExOptions := '', SubcaptureGroup := true, Century?, Validate := false) {
         return DateParser(DateFormat, RegExOptions, SubcaptureGroup)(DateStr, Century ?? unset, Validate)
     }
 
     /**
-     * @description - Creates a `DateObj` object from a timestamp string.
-     * @param {String} Timestamp - The timestamp string to create the `DateObj` object from. `Timestamp`
+     * @description - Creates a {@link DateObj} object from a timestamp string.
+     * @param {String} Timestamp - The timestamp string to create the {@link DateObj} object from. `Timestamp`
      * should at least be 4 characters long containing the year. The rest is optional.
-     * @returns {DateObj} - The `DateObj` object.
+     * @returns {DateObj} - The {@link DateObj} object.
      */
     static FromTimestamp(Timestamp) {
         ObjSetBase(Date := {
@@ -106,16 +132,11 @@ class DateObj {
      * If not set, the current year is used.
      * @returns {Integer} - The number of days in the month.
      */
-    static GetMonthDays(Month, Year?) {
-        switch Month, 0 {
-            case '1', '3', '5', '7', '8', '10', '12':
-                return 31
-            case '4', '6', '9', '11':
-                return 30
-            case '2':
-                return Mod(Year ?? SubStr(A_Now, 1, 4), 4) ? 28 : 29
-            default:
-                throw ValueError('``Month`` must be an integer between 1 and 12.', -1, 'Value: ' Month)
+    static GetDayCount(Month, Year?) {
+        if Month = 2 {
+            return Mod(Year ?? SubStr(A_Now, 1, 4), 4) ? 28 : 29
+        } else {
+            return this.MonthDays[Month]
         }
     }
 
@@ -191,31 +212,267 @@ class DateObj {
         if IsSet(options)
             Proto.Options := options
     }
-
     /**
-     * @property {DateObj.Parser} Parser - The parser object used to create this `DateObj` object.
-     * It can be reused to create more `DateObj` objects from the same format string.
+     * Sets the default century that is used when the {@link DateObj#Year} property is updated with
+     * a one- or two-digit year value. Though this property is referred to as "default century",
+     * you can specify the decade in the default century value if you expect to work with
+     * year values that are single digit. For example, if your code sets the default century to "199"
+     * and then sets `Date.Year := 1`, the year value will be set as "1991".
+     *
+     * The default default century is the current year and decade, i.e. `SubStr(A_Now, 1, 3)`.
+     *
+     * If the default century includes the decade, if your code sets {@link DateObj#Year} with a
+     * two-digit value, the decade from the input value is used. For example, if your code sets
+     * the default century to "199" and then sets `Date.Year := 04`, the year value will be set as
+     * "1904".
+     *
+     * @param {String|Integer} Century - The new default century value as either a 2- or 3-character
+     * value.
      */
-    Parser := ''
+    static SetDefaultCentury(Century) {
+        this.Prototype.DefaultCentury := Century
+    }
 
     /**
-     * @property {Integer} DaySeconds - The number of seconds from midnight.
+     * @description - Adds the time to this object's timestamp, modifying this object's time value.
+     * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
+     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
+     * Specify a negative number to perform subtraction.
+     * @param {String} TimeUnits - The meaning of the `Time` parameter. TimeUnits may be one of the
+     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
+     * @returns {String} - The new timestamp.
+     */
+    Add(Time, TimeUnits) => this.Set(DateAdd(this.Timestamp, Time, TimeUnits))
+
+    /**
+     * @description - Creates a new {@link DateObj} by adding the time value to this object's
+     * timestamp with {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm DateAdd}. Does
+     * not modify this object's time value.
+     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
+     * Specify a negative number to perform subtraction.
+     * @param {String} TimeUnits - The meaning of the `Time` parameter. TimeUnits may be one of the
+     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
+     * @returns {DateObj} - The new {@link DateObj} object.
+     */
+    AddToNew(Time, TimeUnits) => DateObj.FromTimestamp(DateAdd(this.Timestamp, Time, TimeUnits))
+
+    /**
+     * @description - Adds the time value to this object's timestamp with
+     * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm DateAdd} and returns the new
+     * timestamp. Does not modify this object's time value.
+     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
+     * Specify a negative number to perform subtraction.
+     * @param {String} TimeUnits - The meaning of the `Time` parameter. TimeUnits may be one of the
+     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
+     * @returns {String} - The return value from {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm DateAdd}
+     */
+    AddToTimestamp(Time, TimeUnits) => DateAdd(this.Timestamp, Time, TimeUnits)
+
+    /**
+     * Calls `DateObj.FromTimestamp(this.Timestamp)`, returning a new {@link DateObj} with the same
+     * time value.
+     * @returns {DateObj}
+     */
+    Clone() => DateObj.FromTimestamp(this.Timestamp)
+
+    /**
+     * @description - Get the difference between two dates.
+     * {@link https://www.autohotkey.com/docs/v2/lib/DateDiff.htm}
+     * @param {String} Unit - Units to measure the difference in. TimeUnits may be one of the
+     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
+     * @param {String} [Timestamp] - The timestamp to compare to. If not set, the current time is used.
+     * @returns {Integer} - The difference between the two dates.
+     */
+    Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
+
+    Get(FormatStr) => FormatTime(this.Timestamp ' ' this.Options, FormatStr)
+
+    /**
+     * @description - Get the timestamp from the date object. You can pass default values to
+     * any of the parameters. Also see {@link DateObj.SetDefault}.
+     * @param {String} [DefaultYear] - The default year to use if the year is not set.
+     * @param {String} [DefaultMonth] - The default month to use if the month is not set.
+     * @param {String} [DefaultDay] - The default day to use if the day is not set.
+     * @param {String} [DefaultHour] - The default hour to use if the hour is not set.
+     * @param {String} [DefaultMinute] - The default minute to use if the minute is not set.
+     * @param {String} [DefaultSecond] - The default second to use if the second is not set.
+     * @returns {String} - The timestamp.
+     */
+    GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour?, DefaultMinute?, DefaultSecond?) {
+        return (
+            (this.HasOwnProp('Year') ? this.Year : DefaultYear ?? this.Base.Year)
+            (this.HasOwnProp('Month') ? this.Month : DefaultMonth ?? this.Base.Month)
+            (this.HasOwnProp('Day') ? this.Day : DefaultDay ?? this.Base.Day)
+            (this.HasOwnProp('Hour') ? this.Hour : DefaultHour ?? this.Base.Hour)
+            (this.HasOwnProp('Minute') ? this.Minute : DefaultMinute ?? this.Base.Minute)
+            (this.HasOwnProp('Second') ? this.Second : DefaultSecond ?? this.Base.Second)
+        )
+    }
+
+    /**
+     * @description - Adds options that get used when accessing any of the time format properties.
+     * @param {String} Options - The options to use.
+     * @see https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Additional_Options
+     */
+    Opt(Options) => this.Options := Options
+
+    /**
+     * Adjusts this object's time value using an input timestamp. The input timestamp does not need
+     * to be the full 14 characters representing yyyyMMddHHmmss, but the meaning of the characters
+     * are interpreted in that order. For example, passing "2004" to {@link DateObj.Prototype.Set}
+     * will only update the year to 2004. Passing "200403" will update the year to 2004 and the month
+     * to 03. Passing "20040320" will update the year to 2004, the month to 03, and the day to 20.
+     * @param {String|Integer} Timestamp - The new time value.
+     * @returns {String} - This object's new timestamp.
+     * @throws {ValueError} - "`Timestamp` must be at least 4 characters in length."
+     */
+    Set(Timestamp) {
+        if StrLen(Timestamp) >= 4 {
+            this.__Year := SubStr(Timestamp, 1, 4)
+        } else {
+            throw ValueError('``Timestamp`` must at least be 4 characters in length.', -1, Timestamp)
+        }
+        if StrLen(Timestamp) >= 6 {
+            this.__Month := SubStr(Timestamp, 5, 2)
+        }
+        if StrLen(Timestamp) >= 8 {
+            this.__Day := SubStr(Timestamp, 7, 2)
+        }
+        if StrLen(Timestamp) >= 10 {
+            this.__Hour := SubStr(Timestamp, 9, 2)
+        }
+        if StrLen(Timestamp) >= 12 {
+            this.__Minute := SubStr(Timestamp, 11, 2)
+        }
+        if StrLen(Timestamp) >= 14 {
+            this.__Second := SubStr(Timestamp, 13, 2)
+        }
+        return this.Timestamp
+    }
+    /**
+     * Updates the year value.
+     * @param {String|Integer} Year - The year value
+     * @returns {String} - The new timestamp
+     * @throws {ValueError} - "The input `Year` is one digit, but the default century value is not
+     * three digits, so the correct year cannot be constructed."
+     * @throws {ValueError} - "The input `Year` is two digits, but the default century value is
+     * less than two digits, so the correct year cannot be constructed."
+     * @throws {ValueError} - "Unexpected `Year`.". This occurs if the length of `Year` is not
+     * 1, 2, or 4.
+     */
+    SetYear(Year) {
+        switch StrLen(Year) {
+            case 1:
+                if StrLen(this.DefaultCentury) == 3 {
+                    this.DefineProp('__Year', { Value: this.DefaultCentury Year })
+                } else {
+                    ; If you get this error, see static method `DateObj.SetDefaultCentury`.
+                    throw ValueError('The input ``Year`` is one digit, but the default century'
+                    ' value is not three digits, so the correct year cannot be constructed.', -1
+                    , Year)
+                }
+            case 2:
+                if StrLen(this.DefaultCentury) >= 2 {
+                    this.DefineProp('__Year', { Value: SubStr(this.DefaultCentury, 1, 2) Year })
+                } else {
+                    ; If you get this error, see static method `DateObj.SetDefaultCentury`.
+                    throw ValueError('The input ``Year`` is two digits, but the default century'
+                    ' value is less than two digits, so the correct year cannot be constructed.'
+                    , -1, Year)
+                }
+            case 4:
+                this.DefineProp('__Year', { Value: Year })
+            default: throw ValueError('Unexpected ``Year``.', -1, Year)
+        }
+        return this.Timestamp
+    }
+    /**
+     * Updates a time value, padding the value with a "0" if the input `Value` is 1 character.
+     * @param {String|Integer} Value - The new value.
+     * @param {String} Unit - The meaning of `Value`.
+     * @returns {String} - The new timestamp.
+     */
+    SetTimeValue(Value, Unit) {
+        this.DefineProp('__' Unit, { Value: StrLen(Value) == 1 ? '0' Value : Value })
+        return this.Timestamp
+    }
+
+    /**
+     * @description - Enables the ability to get a numeric value by adding 'N' to the front of a
+     * property name.
+     * @example
+     *  Date := DateObj('2024-01-28 19:15', 'yyyy-MM-dd HH:mm')
+     *  MsgBox(Type(Date.Minute)) ; String
+     *  MsgBox(Type(Date.NMinute)) ; Integer
+     *
+     *  ; AHK handles conversions most of the time anyway.
+     *  z := 10
+     *  MsgBox(Date.NMinute + z) ; 25
+     *  MsgBox(Date.Minute + z) ; 25
+     *
+     *  ; Map object keys do not convert.
+     *  m := Map(15, 'val')
+     *  MsgBox(m[Date.NMinute]) ; 'val'
+     *  MsgBox(m[Date.Minute]) ; Error: Item has no value.
+     * @
+     */
+    __Get(Name, *) {
+        if SubStr(Name, 1, 1) = 'N' && this.HasOwnProp(SubStr(Name, 2)) {
+            return Number(this.%SubStr(Name, 2)%||0)
+        }
+        throw PropertyError('Unknown property.', -1, Name)
+    }
+
+    /**
+     * @property {Integer} DaySeconds - The number of seconds from midnight, including the
+     * object's current second.
      */
     DaySeconds => this.Hour * 3600 + this.Minute * 60 + this.Second
+    /**
+     * Returns 1 if the object's year is a leap year, 0 otherwise.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    IsLeapYear => Mod(this.Year, 4) ? 0 : 1
     /**
      * @property {String} Timestamp - The timestamp of the date object.
      */
     Timestamp => this.GetTimestamp()
     /**
-     * @property {Integer} YearSeconds - The number of seconds since January 01, 00:00:00 of the current year.
+     * The number of days since January 01 of the object's year, including the object's current day.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    YearDays {
+        Get {
+            d := 0
+            monthDays := DateObj.MonthDays
+            loop this.Month - 1 {
+                if A_Index == 2 {
+                    d += Mod(this.Year, 4) ? 28 : 29
+                } else {
+                    d += monthDays[A_Index]
+                }
+            }
+            return d + this.Day
+        }
+    }
+    /**
+     * The number of seconds since January 01, 00:00:00 of the object's year, including the object's
+     * current second.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
      */
     YearSeconds {
         Get {
             s := 0
             loop this.Month - 1 {
-                s += DateObj.GetMonthDays(A_Index) * 24 * 3600
+                s += DateObj.GetDayCount(A_Index) * 86400
             }
-            return s + (this.Day - 1) * 24 * 3600 + this.DaySeconds
+            return s + (this.Day - 1) * 86400 + this.DaySeconds
         }
     }
 
@@ -264,128 +521,72 @@ class DateObj {
     YWeek => FormatTime(this.Timestamp ' ' this.Options, 'YWeek')
 
     /**
-     * @description - Adds the time to this object's timestamp.
-     * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
-     * Specify a negative number to perform subtraction.
-     * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
-     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
-     * @returns {String} - The new timestamp.
+     * The year value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
-    Add(Time, TimeUnits) => this.Set(DateAdd(this.Timestamp, Time, TimeUnits))
-
-    /**
-     * @description - Adds the time to this object's timestamp, then creates a new object.
-     * {@link https://www.autohotkey.com/docs/v2/lib/DateAdd.htm}
-     * @param {Integer} Time - The amount of time to add, as an integer or floating-point number.
-     * Specify a negative number to perform subtraction.
-     * @param {String} TimeUnits - The meaning of the Time parameter. TimeUnits may be one of the
-     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
-     * @returns {DateObj} - The new `DateObj` object.
-     */
-    AddToNew(Time, TimeUnits) => DateObj.FromTimestamp(this.Add(Time, TimeUnits))
-
-    /**
-     * @description - Get the difference between two dates.
-     * {@link https://www.autohotkey.com/docs/v2/lib/DateDiff.htm}
-     * @param {String} Unit - Units to measure the difference in. TimeUnits may be one of the
-     * following strings (or just the first letter): Seconds, Minutes, Hours or Days.
-     * @param {String} [Timestamp] - The timestamp to compare to. If not set, the current time is used.
-     * @returns {Integer} - The difference between the two dates.
-     */
-    Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
-
-    Get(FormatStr) => FormatTime(this.Timestamp ' ' this.Options, FormatStr)
-
-    /**
-     * @description - Get the timestamp from the date object. You can pass default values to
-     * any of the parameters. Also see {@link DateObj.SetDefault}.
-     * @param {String} [DefaultYear] - The default year to use if the year is not set.
-     * @param {String} [DefaultMonth] - The default month to use if the month is not set.
-     * @param {String} [DefaultDay] - The default day to use if the day is not set.
-     * @param {String} [DefaultHour] - The default hour to use if the hour is not set.
-     * @param {String} [DefaultMinute] - The default minute to use if the minute is not set.
-     * @param {String} [DefaultSecond] - The default second to use if the second is not set.
-     * @returns {String} - The timestamp.
-     */
-    GetTimestamp(DefaultYear?, DefaultMonth?, DefaultDay?, DefaultHour?, DefaultMinute?, DefaultSecond?) {
-        return (
-            (this.HasOwnProp('Year') ? this.Year : DefaultYear ?? this.Base.Year)
-            (this.HasOwnProp('Month') ? this.Month : DefaultMonth ?? this.Base.Month)
-            (this.HasOwnProp('Day') ? this.Day : DefaultDay ?? this.Base.Day)
-            (this.HasOwnProp('Hour') ? this.Hour : DefaultHour ?? this.Base.Hour)
-            (this.HasOwnProp('Minute') ? this.Minute : DefaultMinute ?? this.Base.Minute)
-            (this.HasOwnProp('Second') ? this.Second : DefaultSecond ?? this.Base.Second)
-        )
+    Year {
+        Get => this.__Year
+        Set => this.SetYear(Value)
     }
-
     /**
-     * @description - Adds options that get used when accessing any of the time format properties.
-     * @param {String} Options - The options to use.
-     * @see https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Additional_Options
+     * The month value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
-    Opt(Options) => this.Options := Options
-
-    Set(Timestamp) {
-        this.Year := SubStr(Timestamp, 1, 4)
-        if StrLen(Timestamp) > 4 {
-            this.Month := SubStr(Timestamp, 5, 2)
-        }
-        if StrLen(Timestamp) > 6 {
-            this.Day := SubStr(Timestamp, 7, 2)
-        }
-        if StrLen(Timestamp) > 8 {
-            this.Hour := SubStr(Timestamp, 9, 2)
-        }
-        if StrLen(Timestamp) > 10 {
-            this.Minute := SubStr(Timestamp, 11, 2)
-        }
-        if StrLen(Timestamp) > 12 {
-            this.Second := SubStr(Timestamp, 13, 2)
-        }
+    Month {
+        Get => this.__Month
+        Set => this.SetTimeValue(Value, 'Month')
     }
-
     /**
-     * @description - Enables the ability to get a numeric value by adding 'N' to the front of a
-     * property name.
-     * @example
-     *  Date := DateObj('2024-01-28 19:15', 'yyyy-MM-dd HH:mm')
-     *  MsgBox(Type(Date.Minute)) ; String
-     *  MsgBox(Type(Date.NMinute)) ; Integer
-     *
-     *  ; AHK handles conversions most of the time anyway.
-     *  z := 10
-     *  MsgBox(Date.NMinute + z) ; 25
-     *  MsgBox(Date.Minute + z) ; 25
-     *
-     *  ; Map object keys do not convert.
-     *  m := Map(15, 'val')
-     *  MsgBox(m[Date.NMinute]) ; 'val'
-     *  MsgBox(m[Date.Minute]) ; Error: Item has no value.
-     * @
+     * The day value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
-    __Get(Name, *) {
-        if SubStr(Name, 1, 1) = 'N' && this.HasOwnProp(SubStr(Name, 2)) {
-            return Number(this.%SubStr(Name, 2)%||0)
-        }
-        throw PropertyError('Unknown property.', -1, Name)
+    Day {
+        Get => this.__Day
+        Set => this.SetTimeValue(Value, 'Day')
     }
-
-    static __New() {
-        if this.Prototype.__Class == 'DateObj' {
-            Proto := this.Prototype
-            Proto.Year := SubStr(A_Now, 1, 4)
-            Proto.Month := '01'
-            Proto.Day := '01'
-            Proto.Hour := '00'
-            Proto.Minute := '00'
-            Proto.Second := '00'
-            Proto.Options := ''
-        }
+    /**
+     * The hour value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
+     */
+    Hour {
+        Get => this.__Hour
+        Set => this.SetTimeValue(Value, 'Hour')
+    }
+    /**
+     * The minute value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
+     */
+    Minute {
+        Get => this.__Minute
+        Set => this.SetTimeValue(Value, 'Minute')
+    }
+    /**
+     * The second value.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
+     */
+    Second {
+        Get => this.__Second
+        Set => this.SetTimeValue(Value, 'Second')
     }
 }
 
 class DateParser {
+    static __New() {
+        this.DeleteProp('__New')
+        this.Prototype.12hour := false
+    }
 
     /**
      * @description - Contains three built-in patterns to parse date strings. These are the literal patterns:
@@ -402,7 +603,7 @@ class DateParser {
      * "h:m:s" - time by itself, the seconds optional
      *
      * @param {String} DateStr - The date string to parse.
-     * @returns {DateObj} - The `DateObj` object.
+     * @returns {DateObj} - The {@link DateObj} object.
      */
     static Parse(DateStr) {
         if RegExMatch(DateStr, '(?<Year>\d{4}).(?<Month>\d{1,2}).(?<Day>\d{1,2})(?:.+?(?<Hour>\d{1,2}).(?<Minute>\d{1,2})(?:.(?<Second>\d{1,2}))?)?', &match)
@@ -427,8 +628,8 @@ class DateParser {
     }
 
     /**
-     * @description - Creates a `DateParser` object that can be reused to create `DateObj` objects.
-     * @param {String} DateFormat - The format of the date string. See the `DateObj.Call`
+     * @description - Creates a `DateParser` object that can be reused to create {@link DateObj} objects.
+     * @param {String} DateFormat - The format of the date string. See the {@link DateObj.Call}
      * description for details.
      * @param {String} [RegExOptions=""] - The RegEx options to add to the beginning of the pattern.
      * Include the close parenthesis, e.g. "i)".
@@ -509,7 +710,7 @@ class DateParser {
     }
 
     /**
-     * @description - Parses the input date string and returns a `DateObj` object.
+     * @description - Parses the input date string and returns a {@link DateObj} object.
      * @param {String} DateStr - The date string to parse.
      * @param {String} [Century] - The century to use when parsing a 1- or 2-digit year. If not set,
      * the current century is used.
@@ -517,7 +718,7 @@ class DateParser {
      * before the function completes. The values are validated numerically, and if any value exceeds
      * the maximum value for that property, an error is thrown. For example, if the month is greater
      * than 13 or the hour is greater than 24, an error is thrown.
-     * @returns {DateObj} - The `DateObj` object.
+     * @returns {DateObj} - The {@link DateObj} object.
      */
     Call(DateStr, Century?, Validate := false) {
         local Match
@@ -532,21 +733,21 @@ class DateParser {
                 case 'Year':
                     if match.Len['Year'] {
                         switch match.Len['Year'] {
-                            case 1: Date.DefineProp('Year', { Value: (Century ?? SubStr(A_Now, 1, 3)) match['Year'] })
-                            case 2: Date.DefineProp('Year', { Value: (Century ?? SubStr(A_Now, 1, 2)) match['Year'] })
-                            case 4: Date.DefineProp('Year', { Value: match['Year'] })
+                            case 1: Date.DefineProp('__Year', { Value: (Century ?? SubStr(A_Now, 1, 3)) match['Year'] })
+                            case 2: Date.DefineProp('__Year', { Value: (Century ?? SubStr(A_Now, 1, 2)) match['Year'] })
+                            case 4: Date.DefineProp('__Year', { Value: match['Year'] })
                         }
                     }
                 case 'Month':
                     if match.Len['Month'] {
                         if IsNumber(match['Month']) {
                             if match.Len['Month'] == 1 {
-                                Date.DefineProp('Month', { Value: '0' match['Month'] })
+                                Date.DefineProp('__Month', { Value: '0' match['Month'] })
                             } else {
-                                Date.DefineProp('Month', { Value: match['Month'] })
+                                Date.DefineProp('__Month', { Value: match['Month'] })
                             }
                         } else {
-                            Date.DefineProp('Month', { Value: DateObj.GetMonthIndex(match['Month'], true) })
+                            Date.DefineProp('__Month', { Value: DateObj.GetMonthIndex(match['Month'], true) })
                         }
                     }
                 case 'Hour':
@@ -556,33 +757,33 @@ class DateParser {
                             switch SubStr(match['Period'], 1, 1), 0 {
                                 case 'a':
                                     if n == 12 {
-                                        Date.DefineProp('Hour', { Value: '00' })
+                                        Date.DefineProp('__Hour', { Value: '00' })
                                     } else if Match.Len['Hour'] == 1 {
-                                        Date.DefineProp('Hour', { Value: '0' match['Hour'] })
+                                        Date.DefineProp('__Hour', { Value: '0' match['Hour'] })
                                     } else {
-                                        Date.DefineProp('Hour', { Value: match['Hour'] })
+                                        Date.DefineProp('__Hour', { Value: match['Hour'] })
                                     }
                                 case 'p':
                                     if n == 12 {
-                                        Date.DefineProp('Hour', { Value: '12' })
+                                        Date.DefineProp('__Hour', { Value: '12' })
                                     } else {
-                                        Date.DefineProp('Hour', { Value: String(n + 12) })
+                                        Date.DefineProp('__Hour', { Value: String(n + 12) })
                                     }
                             }
                         } else {
                             if match.Len['Hour'] == 1 {
-                                Date.DefineProp('Hour', { Value: '0' match['Hour'] })
+                                Date.DefineProp('__Hour', { Value: '0' match['Hour'] })
                             } else if match.Len['Hour'] == 2 {
-                                Date.DefineProp('Hour', { Value: match['Hour'] })
+                                Date.DefineProp('__Hour', { Value: match['Hour'] })
                             }
                         }
                     }
                 case 'Minute', 'Second', 'Day':
                     if match.Len[unit] {
                         if match.Len[unit] == 1 {
-                            Date.DefineProp(unit, { Value: '0' match[unit] })
+                            Date.DefineProp('__' unit, { Value: '0' match[unit] })
                         } else if match.Len[unit] == 2 {
-                            Date.DefineProp(unit, { Value: match[unit] })
+                            Date.DefineProp('__' unit, { Value: match[unit] })
                         }
                     }
             }
@@ -594,7 +795,7 @@ class DateParser {
             if Date.Month == '02' && !Date.Year {
                 if Date.NDay > 29
                     _ThrowInvalidResultError('Day: ' Date.Day)
-            } else if Date.NDay > DateObj.GetMonthDays(Date.NMonth, Date.NYear)
+            } else if Date.NDay > DateObj.GetDayCount(Date.NMonth, Date.NYear)
                 _ThrowInvalidResultError('Day: ' Date.Day)
             if Date.NHour > 24
                 _ThrowInvalidResultError('Hour: ' Date.Hour)
@@ -607,12 +808,6 @@ class DateParser {
 
         _ThrowInvalidResultError(Value) {
             throw ValueError('The result produced an invalid date.', -2, Value)
-        }
-    }
-
-    static __New() {
-        if this.Prototype.__Class == 'DateParser' {
-            this.Prototype.12hour := false
         }
     }
 }
