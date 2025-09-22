@@ -472,7 +472,7 @@ class DateObj {
      * @instance
      * @type {Integer}
      */
-    IsLeapYear => !Mod(this.Year, 4) && (Mod(this.Year, 100) || !Mod(this.Year, 400))
+    IsLeapYear => DateObj.IsLeapYear(this.Year)
     /**
      * The number of seconds since January 01, 00:00:00 of the object's millenia. For example, if the
      * object's time value is 20240530182020, then {@link DateObj.Prototype.MilleniaSeconds} will
@@ -481,7 +481,7 @@ class DateObj {
      * @instance
      * @type {Integer}
      */
-    MilleniaSeconds => (SubStr(this.Year, 2) - 1) * 31536000 + this.YearSeconds
+    MilleniaSeconds => DateObj.GetSeconds(SubStr(this.Year, 1, 1) '000' SubStr(this.Timestamp, 5), this.Timestamp)
     /**
      * The total seconds in this object's year. If it is a leap year, returns 31536000. Else,
      * returns 31449600.
@@ -505,12 +505,12 @@ class DateObj {
      */
     Timestamp => this.GetTimestamp()
     /**
-     * The number of seconds since January 01, 00:00:00 of year 0 of the Gregorian calendar.
+     * The number of seconds since January 01, 00:00:00 of year 1 in the proleptic Gregorian calendar.
      * @memberof DateObj
      * @instance
      * @type {Integer}
      */
-    TotalSeconds => (this.Year - 1) * 31536000 + this.YearSeconds
+    TotalSeconds => DateObj.GetSeconds('00010101000000', this.Timestamp)
     /**
      * The number of days since January 01 of the object's year, including the object's current day.
      * @memberof DateObj
