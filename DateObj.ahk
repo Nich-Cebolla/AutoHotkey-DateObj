@@ -314,7 +314,7 @@ class DateObj {
      */
     Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
 
-    Get(FormatStr) => FormatTime(this.Timestamp ' ' this.Options, FormatStr)
+    Get(FormatStr?) => FormatTime(this.Timestamp ' ' this.Options, FormatStr ?? unset)
 
     /**
      * @description - Get the number of days in a month.
