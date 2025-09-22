@@ -18,19 +18,22 @@ class DateObj {
         proto.Options := proto.Parser := ''
         proto.DefaultCentury := SubStr(A_Now, 1, 3)
         this.MonthDays := [
-            31      ; 1
-          , ''      ; 2
-          , 31      ; 3
-          , 30      ; 4
-          , 31      ; 5
-          , 30      ; 6
-          , 31      ; 7
-          , 31      ; 8
-          , 30      ; 9
-          , 31      ; 10
-          , 30      ; 11
-          , 31      ; 12
+            31          ; 1
+            ; standard, leap
+          , [ 28, 29 ]  ; 2
+          , 31          ; 3
+          , 30          ; 4
+          , 31          ; 5
+          , 30          ; 6
+          , 31          ; 7
+          , 31          ; 8
+          , 30          ; 9
+          , 31          ; 10
+          , 30          ; 11
+          , 31          ; 12
         ]
+        global DATEOBJ_SECONDS_IN_YEAR := 31536000
+        , DATEOBJ_SECONDS_IN_LEAPYEAR := 31622400
     }
 
     /**
@@ -133,7 +136,8 @@ class DateObj {
      */
     static GetDayCount(Month, Year?) {
         if Month = 2 {
-            return Mod(Year ?? SubStr(A_Now, 1, 4), 4) ? 28 : 29
+            n := this.IsLeapYear(Year ?? SubStr(A_Now, 1, 4)) + 1
+            return this.MonthDays[2][n]
         } else {
             return this.MonthDays[Month]
         }
@@ -183,6 +187,43 @@ class DateObj {
             throw ValueError('Unexpected value for ``MonthStr``.', -1, MonthStr)
         }
     }
+
+    static GetSeconds(StartTimestamp, EndTimestamp) {
+        start := DateObj.FromTimestamp(StartTimestamp)
+        end := DateObj.FromTimestamp(EndTimestamp)
+        if end.Year < start.Year || (start.Year = end.Year && end.YearSeconds < start.YearSeconds) {
+            throw ValueError('``StartTimestamp`` must specify a time value earlier than ``EndTimestamp``.', -1)
+        }
+        if start.Year = end.Year {
+            return end.YearSeconds - start.YearSeconds
+        }
+        ; Count leap years in (start.Year, end.Year)
+        leapYears := this.LeapCountBetween(start.Year, end.Year)
+        return start.SecondsRemainingInYear                                     ; remainder of start year
+          + end.YearSeconds                                     ; elapsed in end year
+          + (end.Year - start.Year - 1 - leapYears) * DATEOBJ_SECONDS_IN_YEAR   ; 365-day years
+          + leapYears * DATEOBJ_SECONDS_IN_LEAPYEAR             ; 366-day years
+    }
+
+    static IsLeapYear(Year) => (!Mod(Year, 4) && (Mod(Year, 100) || !Mod(Year, 400))) ? 1 : 0
+
+    /**
+     * Returns the count of integers between `Year` and 0, excluding `Year`, that satisfy the
+     * Gregorian leap rule.
+     * @param {Integer} Year - The year.
+     * @returns {Integer}
+     */
+    static LeapCountBefore(Year) {
+        k := Year - 1
+        return Floor(k / 4) - Floor(k / 100) + Floor(k / 400)
+    }
+
+    /**
+     * Returns the count of integers between `StartYear` and `EndYear`, excluding both `StartYear`
+     * and `EndYear`, that satisfy the Gregorian leap rule.
+     * @param {Integer} Year - The year.
+     */
+    static LeapCountBetween(StartYear, EndYear) => Abs(this.LeapCountBefore(EndYear) - this.LeapCountBefore(StartYear + 1))
 
     /**
      * @description - Sets the default values that the date objects will use for the timestamp when
@@ -274,6 +315,13 @@ class DateObj {
     Diff(Unit, Timestamp?) => DateDiff(this.Timestamp, Timestamp ?? A_Now, Unit)
 
     Get(FormatStr) => FormatTime(this.Timestamp ' ' this.Options, FormatStr)
+
+    /**
+     * @description - Get the number of days in a month.
+     * @param {Integer} Month - The month to get the number of days for.
+     * @returns {Integer} - The number of days in the month.
+     */
+    GetDayCount(Month) => DateObj.GetDayCount(Month, this.Year)
 
     /**
      * @description - Get the timestamp from the date object. You can pass default values to
@@ -412,8 +460,10 @@ class DateObj {
     }
 
     /**
-     * @property {Integer} DaySeconds - The number of seconds from midnight, including the
-     * object's current second.
+     * The number of seconds from midnight, including the object's current second.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
      */
     DaySeconds => this.Hour * 3600 + this.Minute * 60 + this.Second
     /**
@@ -422,11 +472,45 @@ class DateObj {
      * @instance
      * @type {Integer}
      */
-    IsLeapYear => Mod(this.Year, 4) ? 0 : 1
+    IsLeapYear => !Mod(this.Year, 4) && (Mod(this.Year, 100) || !Mod(this.Year, 400))
     /**
-     * @property {String} Timestamp - The timestamp of the date object.
+     * The number of seconds since January 01, 00:00:00 of the object's millenia. For example, if the
+     * object's time value is 20240530182020, then {@link DateObj.Prototype.MilleniaSeconds} will
+     * return the number of seconds from January 01, 2000, 00:00:00.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    MilleniaSeconds => (SubStr(this.Year, 2) - 1) * 31536000 + this.YearSeconds
+    /**
+     * The total seconds in this object's year. If it is a leap year, returns 31536000. Else,
+     * returns 31449600.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    SecondsInYear => this.IsLeapYear ? DATEOBJ_SECONDS_IN_LEAPYEAR : DATEOBJ_SECONDS_IN_YEAR
+    /**
+     * The seconds remaining until January 01 of the year following the object's current year.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    SecondsRemainingInYear => this.SecondsInYear - this.YearSeconds
+    /**
+     * The timestamp of the date object.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     Timestamp => this.GetTimestamp()
+    /**
+     * The number of seconds since January 01, 00:00:00 of year 0 of the Gregorian calendar.
+     * @memberof DateObj
+     * @instance
+     * @type {Integer}
+     */
+    TotalSeconds => (this.Year - 1) * 31536000 + this.YearSeconds
     /**
      * The number of days since January 01 of the object's year, including the object's current day.
      * @memberof DateObj
@@ -458,7 +542,7 @@ class DateObj {
         Get {
             s := 0
             loop this.Month - 1 {
-                s += DateObj.GetDayCount(A_Index) * 86400
+                s += this.GetDayCount(A_Index) * 86400
             }
             return s + (this.Day - 1) * 86400 + this.DaySeconds
         }
@@ -467,44 +551,69 @@ class DateObj {
     /**
      * {@link https://www.autohotkey.com/docs/v2/lib/FormatTime.htm#Standalone_Formats}
      */
+
     /**
-     * @property {String} LongDate - Long date representation for the current user's locale,
-     * such as Friday, April 23, 2004.
+     * Long date representation for the current user's locale, such as Friday, April 23, 2004.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     LongDate => FormatTime(this.Timestamp ' ' this.Options, 'LongDate')
     /**
-     * @property {String} ShortDate - Short date representation for the current user's locale,
-     * such as 02/29/04.
+     * Short date representation for the current user's locale, such as 02/29/04.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     ShortDate => FormatTime(this.Timestamp ' ' this.Options, 'ShortDate')
     /**
-     * @property {String} Time - Time representation for the current user's locale, such as 5:26 PM.
+     * Time representation for the current user's locale, such as 5:26 PM.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     Time => FormatTime(this.Timestamp ' ' this.Options, 'Time')
     /**
-     * @property {String} ToLocale - "Leave Format blank to produce the time followed by the long date.
-     * For example, in some locales it might appear as 4:55 PM Saturday, November 27, 2004"
+     * "Leave Format blank to produce the time followed by the long date. For example, in some
+     * locales it might appear as 4:55 PM Saturday, November 27, 2004"
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     ToLocale => FormatTime(this.Timestamp)
     /**
-     * @property {String} WDay - Day of the week (1 – 7). Sunday is 1.
+     * Day of the week (1 – 7). Sunday is 1.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     WDay => FormatTime(this.Timestamp ' ' this.Options, 'WDay')
     /**
-     * @property {String} YDay - Day of the year without leading zeros (1 – 366).
+     * Day of the year without leading zeros (1 – 366).
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     YDay => FormatTime(this.Timestamp ' ' this.Options, 'YDay')
     /**
-     * @property {String} YDay0 - Day of the year with leading zeros (001 – 366).
+     * Day of the year with leading zeros (001 – 366).
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     YDay0 => FormatTime(this.Timestamp ' ' this.Options, 'YDay0')
     /**
-     * @property {String} YearMonth - Year and month format for the current user's locale, such as
-     * February, 2004.
+     * Year and month format for the current user's locale, such as February, 2004.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     YearMonth => FormatTime(this.Timestamp ' ' this.Options, 'YearMonth')
     /**
-     * @property {String} YWeek - The ISO 8601 full year and week number.
+     * The ISO 8601 full year and week number.
+     * @memberof DateObj
+     * @instance
+     * @type {String}
      */
     YWeek => FormatTime(this.Timestamp ' ' this.Options, 'YWeek')
 
