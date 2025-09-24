@@ -810,7 +810,7 @@ class DateParser {
      * @description - Parses the input date string and returns a {@link DateObj} object.
      * @param {String} DateStr - The date string to parse.
      * @param {String} [Century] - The century to use when parsing a 1- or 2-digit year. If not set,
-     * the current century is used.
+     * the current century is used. If the date strings have 4-digit years, this option is ignored.
      * @param {Boolean} [Validate=false] - When true, the values of each property are validated
      * before the function completes. The values are validated numerically, and if any value exceeds
      * the maximum value for that property, an error is thrown. For example, if the month is greater
