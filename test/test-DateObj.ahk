@@ -1,6 +1,4 @@
-﻿#Include DateObj.ahk
-; https://github.com/Nich-Cebolla/Stringify-ahk/blob/main/Stringify.ahk
-#include <Stringify>
+﻿#Include ..\DateObj.ahk
 
 test_DateObj()
 
@@ -15,10 +13,7 @@ class test_DateObj {
         { str: 'Voicemail From <1-555-555-5555> Received January 28, 2024 at 12:15:12 AM', fmt: 'Received \t{MMMM dd, yyyy} at \t{hh:mm:?ss? tt}', Year: '2024', Month: '01', Day: '28', Hour: '00', Minute: '15', Second: '12' },
         { str: 'The child was born May 2, 1990, the year of the horse', fmt: '\t{MMMM d, yyyy}, the year of the (?<animal>\w+)', Year: '1990', Month: '05', Day: '02', Hour: '00', Minute: '00', Second: '00', Extra: 'Animal' }
     ]
-    , PathOut := A_MyDocuments '\test-output-DateObj.json'
     static Call() {
-        result := this.Result := []
-        result.Capacity := this.tests.Length
         i := 0
         for t in this.tests {
             if A_Index == 5 {
@@ -28,22 +23,14 @@ class test_DateObj {
             d := DateObj(t.str, t.fmt, 'i)')
             for unit in ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'] {
                 if d.%unit% !== t.%unit% {
-                    result.Push({ index: i, test: t, date: d, unit: unit })
+                    throw Error('Unit value mismatch.', , 'Index: ' i '; Test: ' t '; Date: ' d.Timestamp '; nice-date: ' d.Get() '; unit: ' unit)
                 }
             }
             if t.HasOwnProp('Extra') {
                 if this.%t.Extra%(d.Match) {
-                    result.Push({ index: i, test: t, date: d, unit: 'Extra' })
+                    throw Error('Extra value mismatch.', , 'Index: ' i '; Test: ' t '; Date: ' d.Timestamp '; nice-date: ' d.Get() '; extra: ' d.Match['animal'])
                 }
             }
-        }
-        if result.Length {
-            f := FileOpen(this.PathOut, 'w')
-            f.Write(Stringify(result))
-            f.Close()
-            MsgBox('Problems: ' result.Length)
-        } else {
-            MsgBox('No problems')
         }
     }
 
