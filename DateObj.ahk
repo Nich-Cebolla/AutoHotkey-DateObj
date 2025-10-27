@@ -1,7 +1,7 @@
 ﻿/*
     Github: https://github.com/Nich-Cebolla/AutoHotkey-DateObj/blob/main/DateObj.ahk
     Author: Nich-Cebolla
-    Version: 2.1.0
+    Version: 2.2.0
     License: MIT
 */
 
@@ -189,8 +189,8 @@ class DateObj {
     }
 
     static GetSeconds(StartTimestamp, EndTimestamp) {
-        start := DateObj.FromTimestamp(StartTimestamp)
-        end := DateObj.FromTimestamp(EndTimestamp)
+        start := this.FromTimestamp(StartTimestamp)
+        end := this.FromTimestamp(EndTimestamp)
         if end.Year < start.Year || (start.Year = end.Year && end.YearSeconds < start.YearSeconds) {
             throw ValueError('``StartTimestamp`` must specify a time value earlier than ``EndTimestamp``.', -1)
         }
@@ -206,6 +206,25 @@ class DateObj {
     }
 
     static IsLeapYear(Year) => (!Mod(Year, 4) && (Mod(Year, 100) || !Mod(Year, 400))) ? 1 : 0
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance for the first day of the previous month.
+     */
+    static LastMonth() {
+        MM := SubStr(A_Now, 5, 2)
+        if MM = 1 {
+            return this.FromTimestamp((SubStr(A_Now, 1, 4) - 1) '1201000000')
+        } else {
+            return this.FromTimestamp(SubStr(A_Now, 1, 4) Format('{:02}', MM - 1) '01000000')
+        }
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance for the first day of the previous year.
+     */
+    static LastYear() {
+        return this.FromTimestamp((SubStr(A_Now, 1, 4) - 1) '0101000000')
+    }
 
     /**
      * Returns the count of integers between `Year` and 0, excluding `Year`, that satisfy the
@@ -224,6 +243,25 @@ class DateObj {
      * @param {Integer} Year - The year.
      */
     static LeapCountBetween(StartYear, EndYear) => Abs(this.LeapCountBefore(EndYear) - this.LeapCountBefore(StartYear + 1))
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance for the first day of the next month.
+     */
+    static NextMonth() {
+        MM := SubStr(A_Now, 5, 2)
+        if MM = 12 {
+            return this.FromTimestamp((SubStr(A_Now, 1, 4) + 1) '0101000000')
+        } else {
+            return this.FromTimestamp(SubStr(A_Now, 1, 4) Format('{:02}', MM + 1) '01000000')
+        }
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance for the first day of the next year.
+     */
+    static NextYear() {
+        return this.FromTimestamp((SubStr(A_Now, 1, 4) + 1) '0101000000')
+    }
 
     /**
      * @description - Sets the default values that the date objects will use for the timestamp when
@@ -260,6 +298,56 @@ class DateObj {
      */
     static SetDefaultCentury(Century) {
         this.Prototype.DefaultCentury := Century
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance made with:
+     * @example
+     * return this.FromTimestamp(SubStr(A_Now, 1, 6) '01000000')
+     * @
+     */
+    static ThisMonth() {
+        return this.FromTimestamp(SubStr(A_Now, 1, 6) '01000000')
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance made with:
+     * @example
+     * return this.FromTimestamp(SubStr(A_Now, 1, 4) '0101000000')
+     * @
+     */
+    static ThisYear() {
+        return this.FromTimestamp(SubStr(A_Now, 1, 4) '0101000000')
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance made with:
+     * @example
+     * return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000')
+     * @
+     */
+    static Today() {
+        return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000')
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance made with:
+     * @example
+     * return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000').AddToNew(1, 'D')
+     * @
+     */
+    static Tomorrow() {
+        return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000').AddToNew(1, 'D')
+    }
+
+    /**
+     * @returns {DateObj} - A {@link DateObj} instance made with:
+     * @example
+     * return return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000').AddToNew(-1, 'D')
+     * @
+     */
+    static Yesterday() {
+        return this.FromTimestamp(SubStr(A_Now, 1, 8) '000000').AddToNew(-1, 'D')
     }
 
     /**
