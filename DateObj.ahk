@@ -824,6 +824,7 @@ class DateParser {
      * @returns {DateParser} - The `DateParser` object.
      */
     __New(DateFormat, RegExOptions := '', SubcaptureGroup := true) {
+        this.DateFormat := DateFormat
         rc := Chr(0xFFFD) ; replacement character
         replacement := []
         replacement.Capacity := 20
