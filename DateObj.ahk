@@ -32,6 +32,7 @@ class DateObj {
           , 30          ; 11
           , 31          ; 12
         ]
+        this.WDayNames := [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' ]
         global DATEOBJ_SECONDS_IN_YEAR := 31536000
         , DATEOBJ_SECONDS_IN_LEAPYEAR := 31622400
     }
@@ -676,6 +677,20 @@ class DateObj {
      * @type {String}
      */
     WDay => FormatTime(this.Timestamp ' ' this.Options, 'WDay')
+    /**
+     * Day of the week (e.g. Sunday, Monday, Tuesday, ...).
+     * @memberof DateObj
+     * @instance
+     * @type {String}
+     */
+    WDayName => DateObj.WDayNames[this.WDay]
+    /**
+     * Day of the week (e.g. Sun, Mon, Tue, ...).
+     * @memberof DateObj
+     * @instance
+     * @type {String}
+     */
+    WDayNameShort => SubStr(DateObj.WDayNames[this.WDay], 1, 3)
     /**
      * Day of the year without leading zeros (1 – 366).
      * @memberof DateObj
